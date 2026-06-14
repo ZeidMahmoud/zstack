@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# zstack-builder-profile — LEGACY SHIM.
+#
+# Superseded by bin/zstack-developer-profile. This binary now delegates to
+# `zstack-developer-profile --read` to keep /office-hours working during the
+# transition. When all call sites have been updated, this file can be removed.
+#
+# The migration from ~/.zstack/builder-profile.jsonl to the unified
+# ~/.zstack/developer-profile.json happens automatically on first read —
+# see bin/zstack-developer-profile --migrate for details.
+set -euo pipefail
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+exec "$SCRIPT_DIR/zstack-developer-profile" --read "$@"

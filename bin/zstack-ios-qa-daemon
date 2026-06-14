@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# zstack-ios-qa-daemon — Mac-side daemon that brokers tailnet/loopback traffic
+# to a connected iPhone running the in-app StateServer over the CoreDevice USB
+# tunnel. Single-instance via flock on ~/.zstack/ios-qa-daemon.pid.
+#
+# Usage:
+#   zstack-ios-qa-daemon                         # loopback-only (local USB)
+#   zstack-ios-qa-daemon --tailnet               # additionally open tailnet listener
+#
+# Environment:
+#   ZSTACK_IOS_DAEMON_PORT       — loopback listener port (default 9099)
+#   ZSTACK_IOS_TARGET_UDID       — target iOS device UDID (optional; otherwise
+#                                  the first paired connected device is used)
+#   ZSTACK_IOS_TARGET_BUNDLE_ID  — bundle ID of the iOS app hosting StateServer
+#                                  (default com.zstack.iosqa.fixture)
+#
+# Readiness protocol: prints `READY: port=<n> pid=<pid>` to stdout once both
+# listeners are bound. Spawners read stdin with a ~5s timeout to confirm.
+#
+# Exits cleanly when no active loopback clients are connected AND no remote
+# session tokens are outstanding.
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+ZSTACK_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+ENTRY="$ZSTACK_DIR/ios-qa/daemon/src/index.ts"
+
+if [ ! -f "$ENTRY" ]; then
+  echo "zstack-ios-qa-daemon: missing $ENTRY (zstack install incomplete?)" >&2
+  exit 1
+fi
+
+if ! command -v bun >/dev/null 2>&1; then
+  echo "zstack-ios-qa-daemon: bun runtime not on PATH — install from https://bun.sh" >&2
+  exit 1
+fi
+
+exec bun run "$ENTRY" "$@"

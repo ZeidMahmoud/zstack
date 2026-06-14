@@ -1,0 +1,64 @@
+{
+  "version": 2,
+  "plugins": {
+    "clangd-lsp@claude-plugins-official": [
+      {
+        "scope": "user",
+        "installPath": "/home/zeid/.claude/plugins/cache/claude-plugins-official/clangd-lsp/1.0.0",
+        "version": "1.0.0",
+        "installedAt": "2026-05-04T02:15:48.289Z",
+        "lastUpdated": "2026-05-04T02:15:48.289Z"
+      }
+    ],
+    "frontend-design@claude-plugins-official": [
+      {
+        "scope": "user",
+        "installPath": "/home/zeid/.claude/plugins/cache/claude-plugins-official/frontend-design/unknown",
+        "version": "unknown",
+        "installedAt": "2026-05-30T08:56:18.821Z",
+        "lastUpdated": "2026-06-10T05:04:27.657Z",
+        "gitCommitSha": "de573bd84695c6657b28f05ffe32c37bb54d1f55"
+      }
+    ],
+    "superpowers@claude-plugins-official": [
+      {
+        "scope": "user",
+        "installPath": "/home/zeid/.claude/plugins/cache/claude-plugins-official/superpowers/5.1.0",
+        "version": "5.1.0",
+        "installedAt": "2026-05-30T08:56:45.759Z",
+        "lastUpdated": "2026-05-30T08:56:45.759Z",
+        "gitCommitSha": "f2cbfbefebbfef77321e4c9abc9e949826bea9d7"
+      }
+    ],
+    "context7@claude-plugins-official": [
+      {
+        "scope": "user",
+        "installPath": "/home/zeid/.claude/plugins/cache/claude-plugins-official/context7/unknown",
+        "version": "unknown",
+        "installedAt": "2026-05-30T08:56:52.436Z",
+        "lastUpdated": "2026-06-10T05:04:27.656Z",
+        "gitCommitSha": "de573bd84695c6657b28f05ffe32c37bb54d1f55"
+      }
+    ],
+    "github@claude-plugins-official": [
+      {
+        "scope": "user",
+        "installPath": "/home/zeid/.claude/plugins/cache/claude-plugins-official/github/unknown",
+        "version": "unknown",
+        "installedAt": "2026-05-30T08:57:00.279Z",
+        "lastUpdated": "2026-06-10T05:04:27.654Z",
+        "gitCommitSha": "de573bd84695c6657b28f05ffe32c37bb54d1f55"
+      }
+    ],
+    "code-review@claude-plugins-official": [
+      {
+        "scope": "user",
+        "installPath": "/home/zeid/.claude/plugins/cache/claude-plugins-official/code-review/unknown",
+        "version": "unknown",
+        "installedAt": "2026-05-30T08:57:06.200Z",
+        "lastUpdated": "2026-06-10T05:04:27.656Z",
+        "gitCommitSha": "de573bd84695c6657b28f05ffe32c37bb54d1f55"
+      }
+    ]
+  }
+}

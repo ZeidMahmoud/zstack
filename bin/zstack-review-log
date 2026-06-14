@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# zstack-review-log — atomically log a review result
+# Usage: zstack-review-log '{"skill":"...","timestamp":"...","status":"..."}'
+set -euo pipefail
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+eval "$("$SCRIPT_DIR/zstack-slug" 2>/dev/null)"
+ZSTACK_HOME="${ZSTACK_HOME:-$HOME/.zstack}"
+mkdir -p "$ZSTACK_HOME/projects/$SLUG"
+
+# Validate: input must be parseable JSON (reject malformed or injection attempts)
+INPUT="$1"
+if ! printf '%s' "$INPUT" | bun -e "JSON.parse(await Bun.stdin.text())" 2>/dev/null; then
+  # Not valid JSON — refuse to append
+  echo "zstack-review-log: invalid JSON, skipping" >&2
+  exit 1
+fi
+
+echo "$INPUT" >> "$ZSTACK_HOME/projects/$SLUG/$BRANCH-reviews.jsonl"
+
+# gbrain-sync: enqueue for cross-machine sync (no-op if sync is off).
+"$SCRIPT_DIR/zstack-brain-enqueue" "projects/$SLUG/$BRANCH-reviews.jsonl" 2>/dev/null &

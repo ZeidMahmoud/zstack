@@ -1,0 +1,1 @@
+/home/zeid/.claude/skills/gstack/plan-design-review/SKILL.md
