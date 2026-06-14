@@ -675,8 +675,8 @@ describe('office-hours skill structure', () => {
     expect(content).toContain('golden age');
   });
 
-  test('contains Garry Tan personal plea', () => {
-    expect(content).toContain('Garry Tan, the creator of ZStack');
+  test('contains personal plea beat', () => {
+    expect(content).toContain('Personal Plea');
   });
 
   test('contains founder signal synthesis phase', () => {

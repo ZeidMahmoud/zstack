@@ -68,7 +68,7 @@ function setupFixture(home: string): { zstackHome: string; counts: Record<string
   writeFileSync(join(zstackHome, "projects", "test-repo", "learnings.jsonl"), '{"key":"a","insight":"b","confidence":8}\n', "utf-8");
   writeFileSync(join(zstackHome, "projects", "test-repo", "timeline.jsonl"), '{"skill":"office-hours","event":"completed"}\n', "utf-8");
   writeFileSync(join(zstackHome, "projects", "test-repo", "ceo-plans", "2026-05-01-test.md"), "# CEO Plan: Test\n\nbody\n", "utf-8");
-  writeFileSync(join(zstackHome, "projects", "test-repo", "garrytan-main-design-20260501-090000.md"), "# Design: Test\n", "utf-8");
+  writeFileSync(join(zstackHome, "projects", "test-repo", "zeid-main-design-20260501-090000.md"), "# Design: Test\n", "utf-8");
   writeFileSync(join(zstackHome, "projects", "test-repo", "retros", "2026-05-01-week.md"), "# Retro\n", "utf-8");
 
   return {

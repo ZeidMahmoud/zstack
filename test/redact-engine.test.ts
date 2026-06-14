@@ -105,7 +105,7 @@ describe("PII patterns", () => {
     expect(ids("see user@example.com")).not.toContain("pii.email");
     expect(ids("from noreply@github.com")).not.toContain("pii.email");
     expect(
-      scan("me@garry.dev", { repoVisibility: "private", selfEmail: "me@garry.dev" }).findings,
+      scan("me@zeid.dev", { repoVisibility: "private", selfEmail: "me@zeid.dev" }).findings,
     ).toHaveLength(0);
     expect(
       scan("bob@acme.co", { repoVisibility: "private", repoPublicEmails: ["bob@acme.co"] }).findings,

@@ -168,7 +168,7 @@ describe('zstack-gbrain-install D5 detect-first', () => {
     const r = run(INSTALL, ['--dry-run']);
     expect(r.status).toBe(0);
     expect(r.stdout).toContain('DRY RUN: would clone');
-    expect(r.stdout).toContain('https://github.com/garrytan/gbrain.git');
+    expect(r.stdout).toContain('https://github.com/zeid/gbrain.git');
   });
 
   test('rejects a pre-existing path that lacks a valid gbrain package.json', () => {

@@ -1,14 +1,14 @@
 # Plan Tuning v1 — Design Doc
 
 **Status:** Approved for implementation (2026-04-18)
-**Branch:** garrytan/plan-tune-skill
-**Authors:** Garry Tan (user), with AI-assisted reviews from Claude Opus 4.7 + OpenAI Codex gpt-5.4
+**Branch:** zeid/plan-tune-skill
+**Authors:** the author (user), with AI-assisted reviews from Claude Opus 4.7 + OpenAI Codex gpt-5.4
 **Supersedes scope:** adds writing-style + LOC-receipts layer on top of [PLAN_TUNING_V0.md](./PLAN_TUNING_V0.md) (observational substrate). V0 remains in place unchanged.
 **Related:** [PACING_UPDATES_V0.md](./PACING_UPDATES_V0.md) — extracted pacing overhaul, V1.1 plan.
 
 ## What this document is
 
-A canonical record of what /plan-tune v1 is, what it is NOT, what we considered, and why we made each call. Committed to the repo so future contributors (and future Garry) can trace reasoning without archeology. Supersedes any per-user local plan artifacts.
+A canonical record of what /plan-tune v1 is, what it is NOT, what we considered, and why we made each call. Committed to the repo so future contributors (and future the author) can trace reasoning without archeology. Supersedes any per-user local plan artifacts.
 
 ## Credit
 
@@ -47,7 +47,7 @@ The through-line: every review pass correctly narrowed the ambition until the re
 4. **Host-aware preamble echo.** `_EXPLAIN_LEVEL=$(${binDir}/zstack-config get explain_level 2>/dev/null || echo "default")`. Host-portable via existing V0 `ctx.paths.binDir` pattern.
 5. **zstack-config validation.** Document `explain_level: default|terse` in header. Whitelist values. Warn on unknown with specific message + default to `default`.
 6. **LOC reframe in README.** Remove "600,000+ lines of production code" hero framing. Insert `<!-- ZSTACK-THROUGHPUT-PLACEHOLDER -->` anchor. Build-time script replaces anchor with computed multiple + caveat.
-7. **`scc`-backed throughput script** (`scripts/garry-output-comparison.ts`). For each of 2013 + 2026, enumerate Garry-authored public commits, extract added lines from `git diff`, classify via `scc --stdin` (or regex fallback). Output `docs/throughput-2013-vs-2026.json` with per-language breakdown + caveats.
+7. **`scc`-backed throughput script** (`scripts/zeid-output-comparison.ts`). For each of 2013 + 2026, enumerate the author-authored public commits, extract added lines from `git diff`, classify via `scc --stdin` (or regex fallback). Output `docs/throughput-2013-vs-2026.json` with per-language breakdown + caveats.
 8. **`scc` as standalone install script** (`scripts/setup-scc.sh`). Not a `package.json` dependency (truly optional — 95% of users never run throughput). OS-detects and runs `brew install scc` / `apt install scc` / prints GitHub releases link.
 9. **README update pipeline** (`scripts/update-readme-throughput.ts`). Reads `docs/throughput-2013-vs-2026.json` if present, replaces the anchor with computed number. If missing, writes `ZSTACK-THROUGHPUT-PENDING` marker that CI rejects — forces contributor to run the script before commit.
 10. **/retro adds logical SLOC + weighted commits above raw LOC.** Raw LOC stays for context but is visually demoted.
@@ -92,7 +92,7 @@ The through-line: every review pass correctly narrowed the ambition until the re
 
 scripts/
   jargon-list.json                  # NEW: ~50 repo-owned terms (gen-time inlined)
-  garry-output-comparison.ts        # NEW: scc + git per-year, author-scoped
+  zeid-output-comparison.ts        # NEW: scc + git per-year, author-scoped
   update-readme-throughput.ts       # NEW: README anchor replacement
   setup-scc.sh                      # NEW: OS-detecting scc installer
   resolvers/preamble.ts             # MODIFIED: Writing Style section + EXPLAIN_LEVEL echo
@@ -148,10 +148,10 @@ bun run build
    └── other steps (binary compilation, etc.)
 
 Separately, on-demand:
-bun run scripts/garry-output-comparison.ts
+bun run scripts/zeid-output-comparison.ts
    │
    ├── scc preflight (if missing → exit with setup-scc.sh hint)
-   ├── For 2013 + 2026: enumerate Garry-authored commits in public garrytan/* repos
+   ├── For 2013 + 2026: enumerate the author-authored commits in public zeid/* repos
    ├── For each commit: git diff, extract ADDED lines, classify via scc --stdin
    └── Write docs/throughput-2013-vs-2026.json (per-language + caveats)
 ```

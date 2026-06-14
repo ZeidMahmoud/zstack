@@ -188,8 +188,8 @@ export async function getDeviceTunnelIPv6(
   resolve: ResolveImpl = defaultResolve,
 ): Promise<string | null> {
   // CoreDevice mDNS host: lowercase, spaces and apostrophes → hyphens, plus
-  // ".coredevice.local" suffix. Apple normalizes "Garry's Durendal" to
-  // "Garrys-Durendal.coredevice.local".
+  // ".coredevice.local" suffix. Apple normalizes "Alex's Durendal" to
+  // "Alexs-Durendal.coredevice.local".
   const slug = deviceName
     .replace(/['']/g, '')           // strip apostrophes
     .replace(/[\s_]+/g, '-')        // spaces/underscores → hyphens

@@ -34,7 +34,7 @@ Branch 2 is the interesting one. If raw LOC is inflated by some factor, the hone
 
 ### Raw numbers
 
-I wrote a script ([`scripts/garry-output-comparison.ts`](../scripts/garry-output-comparison.ts)) that enumerates every commit I authored across all 41 repos owned by `garrytan/*` on GitHub — 15 public, 26 private — in 2013 and 2026. For each commit, it counts logical lines added (non-blank, non-comment). The 2013 corpus includes Bookface, the YC-internal social network I built that year.
+I wrote a script ([`scripts/zeid-output-comparison.ts`](../scripts/zeid-output-comparison.ts)) that enumerates every commit I authored across all 41 repos owned by `zeid/*` on GitHub — 15 public, 26 private — in 2013 and 2026. For each commit, it counts logical lines added (non-blank, non-comment). The 2013 corpus includes Bookface, the YC-internal social network I built that year.
 
 One repo excluded from 2026: `tax-app` (demo for a YC video, not production work). Baked into the script's `EXCLUDED_REPOS` constant. Run it yourself.
 
@@ -115,7 +115,7 @@ zstack's core real-code feature — the thing that isn't just markdown prompts �
 
 I'm going to steelman harder than the critics steelmanned themselves:
 
-**Greenfield vs maintenance.** 2026 numbers are dominated by new-project code. Mature-codebase maintenance produces fewer lines per day. If you're asking "can Garry 100x the team maintaining 10 million lines of legacy Java at a bank," my number doesn't prove that. Someone else will have to run their own script on a different context.
+**Greenfield vs maintenance.** 2026 numbers are dominated by new-project code. Mature-codebase maintenance produces fewer lines per day. If you're asking "can the author 100x the team maintaining 10 million lines of legacy Java at a bank," my number doesn't prove that. Someone else will have to run their own script on a different context.
 
 **The 2013 baseline has survivorship bias.** My 2013 public activity was low. This analysis includes Bookface (private, 22 active weeks) which was my biggest project that year, so the bias is smaller than it looks. It's not zero. If the true 2013 rate was 50/day instead of 14, the multiple at current pace is 228x instead of 810x. Still high.
 
@@ -164,6 +164,6 @@ The interesting part of the number isn't the volume. It's the rate. And the rate
 
 The delta isn't that I became a better programmer. If anything, my mental model of coding has atrophied. The delta is that AI let me actually ship the things I always wanted to build. Small tools. Personal products. Experiments that used to die in my notebook because the time cost to build them was too high. The gap between "I want this tool" and "this tool exists and I'm using it" collapsed from 3 weeks to 3 hours.
 
-Here's the script: [`scripts/garry-output-comparison.ts`](../scripts/garry-output-comparison.ts). Run it on your own repos. Show me your numbers. The argument isn't about me — it's about whether the ground moved.
+Here's the script: [`scripts/zeid-output-comparison.ts`](../scripts/zeid-output-comparison.ts). Run it on your own repos. Show me your numbers. The argument isn't about me — it's about whether the ground moved.
 
 I'm betting it did for you too.

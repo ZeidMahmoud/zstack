@@ -182,7 +182,7 @@ export type Surface = 'local' | 'tunnel';
  * signal-handler registration is gated on `import.meta.main`, so phoenix
  * can `import { start } from '.../server'` without auto-starting. Full
  * `buildFetchHandler` extraction lands in a follow-up; see plan
- * `/Users/garrytan/.claude/plans/system-instruction-you-are-working-swirling-fountain.md`
+ * `/Users/zeid/.claude/plans/system-instruction-you-are-working-swirling-fountain.md`
  * Part 1.
  */
 export interface ServerConfig {

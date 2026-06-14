@@ -22,8 +22,8 @@
  *      private work exclusion.
  *
  * Requires: scc (for classification when available; falls back to regex).
- * Run: bun run scripts/garry-output-comparison.ts [--repo-root <path>] [--email <addr>...]
- *      ZSTACK_AUTHOR_EMAILS=a@x.com,b@y.com bun run scripts/garry-output-comparison.ts
+ * Run: bun run scripts/output-comparison.ts [--repo-root <path>] [--email <addr>...]
+ *      ZSTACK_AUTHOR_EMAILS=a@x.com,b@y.com bun run scripts/output-comparison.ts
  * Output: docs/throughput-2013-vs-2026.json
  */
 import * as fs from 'fs';

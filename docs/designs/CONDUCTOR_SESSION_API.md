@@ -55,8 +55,8 @@ Discovery endpoint listing active workspaces.
     {
       "id": "abc123",
       "name": "zstack",
-      "branch": "garrytan/chrome-extension-ctrl",
-      "directory": "/Users/garry/zstack",
+      "branch": "zeid/chrome-extension-ctrl",
+      "directory": "/Users/zeid/zstack",
       "pid": 12345,
       "active": true
     }

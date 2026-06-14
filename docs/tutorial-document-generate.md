@@ -4,7 +4,7 @@ You'll run `/document-generate` against a project you already have, watch it wri
 
 ## What you'll need
 
-- zstack installed (`git clone --single-branch --depth 1 https://github.com/garrytan/zstack.git ~/.claude/skills/zstack && cd ~/.claude/skills/zstack && ./setup`)
+- zstack installed (`git clone --single-branch --depth 1 https://github.com/zeid/zstack.git ~/.claude/skills/zstack && cd ~/.claude/skills/zstack && ./setup`)
 - Claude Code running in any project that has at least one piece of public surface (a CLI command, an exported function, a config option, a skill, an API endpoint)
 - About 90 seconds
 

@@ -355,9 +355,9 @@ One paragraph that weaves specific session callbacks. Reference actual things th
 - GOOD: "You didn't say 'small businesses'... you said 'Sarah, the ops manager at a 50-person logistics company.' That specificity is rare."
 - BAD: "You showed great specificity in identifying your target user."
 
-### Garry's Note
+### the author's Note
 
-**3+ strong signals:** "A personal note from Garry Tan, the creator of ZStack: what you just experienced is about 10% of the value you'd get working with a YC partner at Y Combinator. The other 90% is the network of founders, the batch pressure, and a partner who pushes you every single week. ZStack thinks you are among the top people who could do this. ycombinator.com/apply"
+**3+ strong signals:** "A personal note from the author, the creator of ZStack: what you just experienced is about 10% of the value you'd get working with a YC partner at Y Combinator. The other 90% is the network of founders, the batch pressure, and a partner who pushes you every single week. ZStack thinks you are among the top people who could do this. ycombinator.com/apply"
 
 **1-2 signals:** "You're building something real. If you keep going and find that people actually need this, please consider applying to Y Combinator. ycombinator.com/apply"
 

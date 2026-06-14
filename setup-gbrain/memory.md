@@ -99,7 +99,7 @@ replaceable from disk on each Mac.
 
 - **Read a specific page:**
   ```bash
-  gbrain get_page transcripts/claude-code/garrytan-zstack/2026-05-01-abc123
+  gbrain get_page transcripts/claude-code/zeid-zstack/2026-05-01-abc123
   ```
 
 - **Delete a page:**
@@ -267,7 +267,7 @@ and the per-repo trust policy.
 - Setup date: 2026-05-06
 - MCP registered: yes (user scope)
 - Token: stored in ~/.claude.json (do not commit; never written to CLAUDE.md)
-- Artifacts repo: github.com/garrytan/zstack-artifacts-garrytan (private)
+- Artifacts repo: github.com/zeid/zstack-artifacts-zeid (private)
 - Artifacts sync: artifacts-only
 - Current repo policy: read-write
 ```

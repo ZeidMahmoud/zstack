@@ -28,7 +28,7 @@
  * internals switch from 4-call composition to a single MCP call.
  *
  * Usage:
- *   zstack-brain-context-load --skill office-hours --repo garrytan-zstack
+ *   zstack-brain-context-load --skill office-hours --repo zeid-zstack
  *   zstack-brain-context-load --skill-file ./SKILL.md --repo X --user Y
  *   zstack-brain-context-load --window 14d --explain
  *   zstack-brain-context-load --quiet

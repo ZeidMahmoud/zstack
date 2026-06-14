@@ -19,8 +19,8 @@ CACHE_FILE="$STATE_DIR/last-update-check"
 MARKER_FILE="$STATE_DIR/just-upgraded-from"
 SNOOZE_FILE="$STATE_DIR/update-snoozed"
 VERSION_FILE="$ZSTACK_DIR/VERSION"
-REMOTE_URL="${ZSTACK_REMOTE_URL:-https://raw.githubusercontent.com/garrytan/zstack/main/VERSION}"
-REMOTE_REPO="${ZSTACK_REMOTE_REPO:-https://github.com/garrytan/zstack.git}"
+REMOTE_URL="${ZSTACK_REMOTE_URL:-https://raw.githubusercontent.com/zeid/zstack/main/VERSION}"
+REMOTE_REPO="${ZSTACK_REMOTE_REPO:-https://github.com/zeid/zstack.git}"
 
 # ─── Force flag (busts cache + snooze for standalone /zstack-upgrade) ──
 if [ "${1:-}" = "--force" ]; then
@@ -197,7 +197,7 @@ if [ -z "${ZSTACK_REMOTE_URL:-}" ]; then
     git ls-remote "$REMOTE_REPO" refs/heads/main 2>/dev/null || true)"
   _REMOTE_SHA="$(echo "$_LSR_LINE" | awk '{print $1}')"
   if echo "$_REMOTE_SHA" | grep -qE '^[0-9a-f]{40}$'; then
-    _SHA_URL="https://raw.githubusercontent.com/garrytan/zstack/${_REMOTE_SHA}/VERSION"
+    _SHA_URL="https://raw.githubusercontent.com/zeid/zstack/${_REMOTE_SHA}/VERSION"
     REMOTE="$(curl -sf --max-time 5 "$_SHA_URL" 2>/dev/null || true)"
   fi
 fi

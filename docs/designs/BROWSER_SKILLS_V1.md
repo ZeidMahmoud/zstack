@@ -1,8 +1,8 @@
 # Browser-Skills v1 — codifying repeated browser flows
 
-**Status:** Phase 1 shipped on `garrytan/browserharness`. Phases 2-4 enumerated below.
+**Status:** Phase 1 shipped on `zeid/browserharness`. Phases 2-4 enumerated below.
 **Last updated:** 2026-04-26
-**Authors:** garrytan (with /plan-eng-review and /codex outside-voice review)
+**Authors:** zeid (with /plan-eng-review and /codex outside-voice review)
 
 ## What this is
 
@@ -59,8 +59,8 @@ The plan as approved replaces the existing P1.
 
 | Phase | Branch | Scope |
 |-------|--------|-------|
-| **1** | `garrytan/browserharness` | SDK, storage, `$B skill list/run/show/test/rm` subcommands, scoped-token model, bundled `hackernews-frontpage` reference. **Shipped (v1.19.0.0, consolidated with Phase 2a).** |
-| **2a** | `garrytan/browserharness` (continues) | `/scrape <intent>` (read-only, single entry point with match/prototype paths) + `/skillify` (codifies prototype into permanent skill). Adds `browse/src/browser-skill-write.ts` D3 atomic-write helper. **Shipping v1.19.0.0.** |
+| **1** | `zeid/browserharness` | SDK, storage, `$B skill list/run/show/test/rm` subcommands, scoped-token model, bundled `hackernews-frontpage` reference. **Shipped (v1.19.0.0, consolidated with Phase 2a).** |
+| **2a** | `zeid/browserharness` (continues) | `/scrape <intent>` (read-only, single entry point with match/prototype paths) + `/skillify` (codifies prototype into permanent skill). Adds `browse/src/browser-skill-write.ts` D3 atomic-write helper. **Shipping v1.19.0.0.** |
 | **2b** | new (`browser-skills-automate`) | `/automate` skill template (mutating-flow sibling of `/scrape`). Reuses `/skillify` and the D3 helper. Per-mutating-step confirmation gate when running non-codified. P0 in TODOS. |
 | **3** | new (`browser-skills-resolver`) | Resolver injection at session start (per-host browser-skill discovery). Mirrors domain-skill injection. `zstack-config browser_skillify_prompts` knob. |
 | **4** | new | Eval test infrastructure (LLM-judge), fixture-staleness detection, periodic re-validation against live pages, OS-level FS sandbox for untrusted spawns. |

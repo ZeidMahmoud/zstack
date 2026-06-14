@@ -197,14 +197,13 @@ touch ~/.zstack/.writing-style-prompted
 
 Skip if `WRITING_STYLE_PENDING` is `no`.
 
-If `LAKE_INTRO` is `no`: say "zstack follows the **Boil the Lake** principle — do the complete thing when AI makes marginal cost near-zero. Read more: https://garryslist.org/posts/boil-the-ocean" Offer to open:
+If `LAKE_INTRO` is `no`: say "zstack follows the **Boil the Lake** principle — do the complete thing when AI makes marginal cost near-zero." Then run:
 
 ```bash
-open https://garryslist.org/posts/boil-the-ocean
 touch ~/.zstack/.completeness-intro-seen
 ```
 
-Only run `open` if yes. Always run `touch`.
+Always run `touch`.
 
 If `TEL_PROMPTED` is `no` AND `LAKE_INTRO` is `yes`: ask telemetry once via AskUserQuestion:
 
@@ -564,7 +563,7 @@ $P generate letter.md letter.pdf      # explicit output path
 ### Publication mode — cover + TOC + chapter breaks
 
 ```bash
-$P generate --cover --toc --author "Garry Tan" --title "On Horizons" \
+$P generate --cover --toc --author "Your Name" --title "On Horizons" \
   essay.md essay.pdf
 ```
 

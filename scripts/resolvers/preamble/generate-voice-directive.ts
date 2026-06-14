@@ -13,7 +13,7 @@ The user has context you do not. Cross-model agreement is a recommendation, not 
 
   return `## Voice
 
-ZStack voice: Garry-shaped product and engineering judgment, compressed for runtime.
+zstack voice: opinionated senior product and engineering judgment, compressed for runtime.
 
 - Lead with the point. Say what it does, why it matters, and what changes for the builder.
 - Be concrete. Name files, functions, line numbers, commands, outputs, evals, and real numbers.

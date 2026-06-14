@@ -1,8 +1,8 @@
 # /sync-gbrain batch ingest migration
 
-**Status:** Implemented on garrytan/dublin-v1 (D1-D8 decisions land in this PR)
-**Branch:** garrytan/dublin-v1
-**Owner:** Garry Tan
+**Status:** Implemented on zeid/dublin-v1 (D1-D8 decisions land in this PR)
+**Branch:** zeid/dublin-v1
+**Owner:** the author
 **Triggered by:** /investigate run, 2026-05-09
 **Estimated effort:** human ~3 days / CC+zstack ~2 hr
 **Files touched:** 4 source + 1 test = 5 total (under estimate)
@@ -11,7 +11,7 @@
 
 This doc captures the original architecture. Final architecture lands per
 the 8 review decisions captured in
-`/Users/garrytan/.claude/plans/purrfect-tumbling-quiche.md`:
+`/Users/zeid/.claude/plans/purrfect-tumbling-quiche.md`:
 
 - **D1** hierarchical staging dir (mkdir -p per slug segment) — kept
 - **D2** cut over + delete legacy in same PR (no `--legacy-ingest` flag) — kept

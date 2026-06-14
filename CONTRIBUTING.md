@@ -9,7 +9,7 @@ zstack skills are Markdown files that Claude Code discovers from a `skills/` dir
 That's what dev mode does. It symlinks your repo into the local `.claude/skills/` directory so Claude Code reads skills straight from your checkout.
 
 ```bash
-git clone https://github.com/garrytan/zstack.git && cd zstack
+git clone https://github.com/zeid/zstack.git && cd zstack
 bun install                    # install dependencies
 bin/dev-setup                  # activate dev mode
 ```

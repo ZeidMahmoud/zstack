@@ -54,7 +54,7 @@ describe('sidebar: chat tab + nav are removed, Terminal is sole primary surface'
   });
 
   test('Quick-actions buttons (Cleanup / Screenshot / Cookies) survive in the terminal toolbar', () => {
-    // Garry explicitly wanted these kept after the chat rip — they drive
+    // the author explicitly wanted these kept after the chat rip — they drive
     // browser actions, not chat.
     expect(HTML).toContain('id="chat-cleanup-btn"');
     expect(HTML).toContain('id="chat-screenshot-btn"');

@@ -2,7 +2,7 @@
 
 **Status:** V1.1 plan (not yet implemented).
 **Extracted from:** [PLAN_TUNING_V1.md](./PLAN_TUNING_V1.md) during implementation, when review rigor revealed the pacing workstream had structural gaps unfixable via plan-text editing.
-**Authors:** Garry Tan (user), with AI-assisted reviews from Claude Opus 4.7 + OpenAI Codex gpt-5.4.
+**Authors:** the author (user), with AI-assisted reviews from Claude Opus 4.7 + OpenAI Codex gpt-5.4.
 **Review plan:** CEO + Codex + DX + Eng cycle, same rigor as V1.
 
 ## Credit
@@ -64,7 +64,7 @@ During V1 planning, a pacing workstream was drafted: rank findings, auto-accept 
 - **Flip round-trip:** User types `flip test-coverage-bookclub-form`. The original auto-accepted decision re-opens as an AskUserQuestion. User's new choice persists to the Silent Decisions block (or is removed if user flips to explicit surfacing).
 - **Per-phase observability:** `/plan-tune` can display per-phase AskUserQuestion counts for any session, reading from question-log.jsonl's new `phase` field.
 - **First-run reduction:** New users see ≤ 1 meta-prompt (lake intro) before their first real skill runs, vs. V1's 4 (lake + telemetry + proactive + routing).
-- **Human rerun:** Louise + Garry independent qualitative reviews, same pattern as V1.
+- **Human rerun:** Louise + the author independent qualitative reviews, same pattern as V1.
 
 ## Dependencies on V1
 

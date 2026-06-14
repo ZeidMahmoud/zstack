@@ -26,7 +26,7 @@ AskUserQuestion-shaped events from it for `zstack-codex-session-import`?
 Session files: one JSONL per `codex exec` or interactive session. Cwd path
 embedded in the `session_meta` event. CLI version recorded.
 
-## Session JSONL event types (measured on Garry's machine, 2026-05-27)
+## Session JSONL event types (measured on the author's machine, 2026-05-27)
 
 | type           | count | meaning |
 |----------------|------:|---------|

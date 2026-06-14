@@ -162,14 +162,13 @@ touch ~/.zstack/.writing-style-prompted
 
 Skip if `WRITING_STYLE_PENDING` is `no`.
 
-If `LAKE_INTRO` is `no`: say "zstack follows the **Boil the Lake** principle — do the complete thing when AI makes marginal cost near-zero. Read more: https://garryslist.org/posts/boil-the-ocean" Offer to open:
+If `LAKE_INTRO` is `no`: say "zstack follows the **Boil the Lake** principle — do the complete thing when AI makes marginal cost near-zero." Then run:
 
 ```bash
-open https://garryslist.org/posts/boil-the-ocean
 touch ~/.zstack/.completeness-intro-seen
 ```
 
-Only run `open` if yes. Always run `touch`.
+Always run `touch`.
 
 If `TEL_PROMPTED` is `no` AND `LAKE_INTRO` is `yes`: ask telemetry once via AskUserQuestion:
 
@@ -536,7 +535,7 @@ equivalents (cat, sed, find, grep). The dedicated tools are cheaper and clearer.
 
 ## Voice
 
-ZStack voice: Garry-shaped product and engineering judgment, compressed for runtime.
+zstack voice: opinionated senior product and engineering judgment, compressed for runtime.
 
 - Lead with the point. Say what it does, why it matters, and what changes for the builder.
 - Be concrete. Name files, functions, line numbers, commands, outputs, evals, and real numbers.
@@ -710,7 +709,7 @@ Skills that run plan reviews (`/plan-*-review`, `/codex review`) include the EXI
 
 # /setup-gbrain — Coding-Agent Onboarding for gbrain
 
-You are setting up gbrain (https://github.com/garrytan/gbrain), a persistent
+You are setting up gbrain (https://github.com/zeid/gbrain), a persistent
 knowledge base, on the user's local Mac so that this coding agent (typically
 Claude Code) can call it as both a CLI and an MCP tool.
 
@@ -765,7 +764,7 @@ invocation flags here and skip to the matching step.
 
 Read `gbrain_local_status` from the Step 1 detect output. **If it's `broken-db`
 or `broken-config` AND no shortcut flag was passed**, the user has a
-non-working local engine (Garry's repro: `~/.gbrain/config.json` points at a
+non-working local engine (known repro: `~/.gbrain/config.json` points at a
 dead Postgres URL). Fire a targeted AskUserQuestion BEFORE Step 2:
 
 > D# — Your local gbrain engine isn't responding. How do you want to fix it?

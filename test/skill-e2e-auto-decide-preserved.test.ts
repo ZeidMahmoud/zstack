@@ -71,7 +71,7 @@ describeE2E('AUTO_DECIDE opt-in preserved under Conductor flags (periodic)', () 
         env: { ...process.env, ZSTACK_HOME: tmpHome },
         encoding: 'utf-8',
       });
-      // zstack-slug emits `eval`-able shell exports like `SLUG=garrytan-zstack`.
+      // zstack-slug emits `eval`-able shell exports like `SLUG=zeid-zstack`.
       const slug = (slugRes.stdout.match(/SLUG=([^\s;]+)/)?.[1] ?? 'unknown').replace(/['"]/g, '');
 
       // 3. Write the preference: plan-ceo-review-mode → never-ask. The

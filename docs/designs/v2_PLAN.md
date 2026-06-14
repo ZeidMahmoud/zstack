@@ -258,10 +258,10 @@ Documented in v2.0.0.0 release note:
 
 v1.45.0.0:
 - Land in one PR; existing budget-regression test catches any per-skill size regression; eval matrix CI check catches any skill missing its evals.
-- Dogfood: 1 week active use across all of Garry's workspaces before announcing.
+- Dogfood: 1 week active use across all of the author's workspaces before announcing.
 
 v2.0.0.0:
-- **Canary cohort**: ship to dogfood users (Garry + active agents) first via a v2.0.0-rc.1 tag. Real-PTY harness logs section Reads for top 5 workflows (`/ship`, `/qa`, `/review`, `/plan-ceo-review`, `/autoplan`); alert on Read-miss for required sections.
+- **Canary cohort**: ship to dogfood users (the author + active agents) first via a v2.0.0-rc.1 tag. Real-PTY harness logs section Reads for top 5 workflows (`/ship`, `/qa`, `/review`, `/plan-ceo-review`, `/autoplan`); alert on Read-miss for required sections.
 - **Manual verification**: top 5 workflows manually run before tagging v2.0.0.0 final, with before/after transcripts saved as eval baselines.
 - **Regression dashboard**: existing `bun run eval:summary` extended with v1 vs v2 per-skill token + behavioral compliance comparison.
 - **Rollback**: revert PR + `bun run gen:skill-docs` regenerates old shape. Documented in CONTRIBUTING.md.
@@ -593,7 +593,7 @@ No stale diagrams to fix.
 
 ### Test plan artifact
 
-Test plan written to `~/.zstack/projects/garrytan-zstack/garrytan-garrytan-slim-skill-tokens-eng-review-test-plan-<timestamp>.md`. `/qa` and `/qa-only` consume this as primary test input. Covers: per-phase test coverage targets, fixture design for section-loading tests, CI budget enforcement check, migration round-trip test.
+Test plan written to `~/.zstack/projects/zeid-zstack/zeid-zeid-slim-skill-tokens-eng-review-test-plan-<timestamp>.md`. `/qa` and `/qa-only` consume this as primary test input. Covers: per-phase test coverage targets, fixture design for section-loading tests, CI budget enforcement check, migration round-trip test.
 
 ### Failure modes additions
 

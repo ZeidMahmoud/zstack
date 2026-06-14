@@ -105,7 +105,7 @@ describe('selectTests', () => {
     expect(result.selected).toContain('auto-decide-preserved');
     // v1.27+ gate-tier reviewCount-floor regression for transcript bug
     expect(result.selected).toContain('plan-ceo-finding-floor');
-    // garrytan/askuserquestion-split-on-overflow: split-overflow periodic
+    // zeid/askuserquestion-split-on-overflow: split-overflow periodic
     // E2E test also depends on plan-ceo-review/** (5-option scope decision
     // regression for the "drop to fit 4 options" failure mode).
     expect(result.selected).toContain('plan-ceo-split-overflow');

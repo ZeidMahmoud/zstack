@@ -39,11 +39,11 @@ function main() {
   if (!fs.existsSync(JSON_PATH)) {
     // Build hasn't produced the JSON. Write the PENDING marker at the anchor,
     // preserving the anchor so the next run can replace it.
-    const replacement = `${PENDING}: run scripts/garry-output-comparison.ts ${ANCHOR}`;
+    const replacement = `${PENDING}: run scripts/output-comparison.ts ${ANCHOR}`;
     const updated = readme.replace(ANCHOR, replacement);
     fs.writeFileSync(README, updated);
     process.stderr.write(
-      `${JSON_PATH} not found. Wrote ${PENDING} marker to README. Run scripts/garry-output-comparison.ts to generate it.\n`
+      `${JSON_PATH} not found. Wrote ${PENDING} marker to README. Run scripts/output-comparison.ts to generate it.\n`
     );
     // Non-zero exit so CI that wraps this sees the signal, but local dev workflows
     // can continue. Callers can decide whether this is fatal.

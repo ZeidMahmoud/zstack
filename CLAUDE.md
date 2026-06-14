@@ -338,7 +338,7 @@ every `git pull`.
 compiled browse binary. `@huggingface/transformers` v4 requires `onnxruntime-node`
 which fails to `dlopen` from Bun compile's temp extract dir. Only `security.ts`
 (pure-string operations — canary, verdict combiner, attack log, status) is safe
-for `server.ts`. See `~/.zstack/projects/garrytan-zstack/ceo-plans/2026-04-19-prompt-injection-guard.md`
+for `server.ts`. See `~/.zstack/projects/zeid-zstack/ceo-plans/2026-04-19-prompt-injection-guard.md`
 §"Pre-Impl Gate 1 Outcome" for full architectural decision.
 
 **Thresholds** (in `security.ts`):
@@ -533,12 +533,12 @@ Accept findings where the "sloppy" pattern is the correct engineering choice.
 When reviewing or merging community PRs, **always AskUserQuestion** before accepting
 any commit that:
 
-1. **Touches ETHOS.md** — this file is Garry's personal builder philosophy. No edits
+1. **Touches ETHOS.md** — this file is the author's personal builder philosophy. No edits
    from external contributors or AI agents, period.
 2. **Removes or softens promotional material** — YC references, founder perspective,
    and product voice are intentional. PRs that frame these as "unnecessary" or
    "too promotional" must be rejected.
-3. **Changes Garry's voice** — the tone, humor, directness, and perspective in skill
+3. **Changes the author's voice** — the tone, humor, directness, and perspective in skill
    templates, CHANGELOG, and docs are not generic. PRs that rewrite voice to be
    more "neutral" or "professional" must be rejected.
 
@@ -546,28 +546,28 @@ Even if the agent strongly believes a change improves the project, these three
 categories require explicit user approval via AskUserQuestion. No exceptions.
 No auto-merging. No "I'll just clean this up."
 
-## Checking out PRs from garrytan-agents
+## Checking out PRs from zeid-agents
 
-When the user says "check out <PR link>" and the PR is from `garrytan-agents/zstack`
-(or any other fork that is NOT a collaborator on `garrytan/zstack`), do NOT just
+When the user says "check out <PR link>" and the PR is from `zeid-agents/zstack`
+(or any other fork that is NOT a collaborator on `zeid/zstack`), do NOT just
 `gh pr checkout`. Fork PRs don't receive base-repo secrets (`ANTHROPIC_API_KEY`,
 `OPENAI_API_KEY`, etc.), so the eval/E2E CI jobs fail with empty-env auth errors
 regardless of what's set on the base repo.
 
-**Workflow:** push the branch to `garrytan/zstack` (the base repo) and re-target
+**Workflow:** push the branch to `zeid/zstack` (the base repo) and re-target
 the PR from there.
 
 Concretely, after `gh pr checkout <N>`:
 
 1. Note the original PR number and head branch name.
 2. Push the same branch to the base repo: `git push origin HEAD:<branch-name>`
-   (origin = `garrytan/zstack`, since the worktree is set up with that remote).
+   (origin = `zeid/zstack`, since the worktree is set up with that remote).
 3. Close the fork PR (`gh pr close <N> --comment "moving to base-repo branch for secret access"`).
 4. Open a new PR from the base-repo branch: `gh pr create --base main --head <branch-name>`.
 5. New PR's workflows will get secrets automatically.
 
-Why not fix it on the fork side? `garrytan-agents` isn't a collaborator on
-`garrytan/zstack`. Adding it as a collaborator (option A) or flipping the
+Why not fix it on the fork side? `zeid-agents` isn't a collaborator on
+`zeid/zstack`. Adding it as a collaborator (option A) or flipping the
 repo-wide "send secrets to fork PRs" toggle (option B) would let secrets reach
 fork PRs from anyone — broader blast radius than just moving this one branch.
 Option C (this section) keeps secret-distribution scope tight.
@@ -711,7 +711,7 @@ the branch's history. When real work lands, the entry will replace this at /ship
 ### Release-summary format (every `## [X.Y.Z]` entry)
 
 Every version entry in `CHANGELOG.md` MUST start with a release-summary section in
-the ZStack/Garry voice, one viewport's worth of prose + tables that lands like a
+the ZStack/the author voice, one viewport's worth of prose + tables that lands like a
 verdict, not marketing. The itemized changelog (subsections, bullets, files) goes
 BELOW that summary, separated by a `### Itemized changes` header.
 

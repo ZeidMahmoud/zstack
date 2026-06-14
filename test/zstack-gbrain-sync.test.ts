@@ -108,7 +108,7 @@ describe("zstack-gbrain-sync CLI", () => {
 
   it("dry-run derives a stable source id from the canonical git remote", () => {
     // The source id pattern is `zstack-code-<canonicalized-remote>`. For this
-    // repo (github.com/garrytan/zstack), the slug should appear in the dry-run
+    // repo (github.com/zeid/zstack), the slug should appear in the dry-run
     // preview line. We don't pin the exact slug — just verify the prefix +
     // that the preview command would target a source with id zstack-code-*.
     const home = makeTestHome();
@@ -131,7 +131,7 @@ describe("zstack-gbrain-sync CLI", () => {
     // controlled remotes by spawning the CLI in a temp git repo.
     const cases = [
       "https://github.com/radubach/platform.git",      // dot in hostname, total > 32 with old slug
-      "git@github.com:garrytan/zstack.git",            // SCP-style remote
+      "git@github.com:zeid/zstack.git",            // SCP-style remote
       "https://gitlab.example.com/team/proj.git",      // multi-dot host, non-github
       "https://github.com/some-very-long-org-name/some-very-long-repo-name.git", // forces hash-truncate
     ];
@@ -420,7 +420,7 @@ describe("zstack-gbrain-sync CLI", () => {
     // ID was slug-only so both worktrees collapsed onto `zstack-code-<slug>` and
     // last-sync-wins corrupted whichever the user wasn't actively syncing. The
     // pathhash8 suffix makes each worktree's source independent.
-    const remote = "https://github.com/garrytan/zstack.git";
+    const remote = "https://github.com/zeid/zstack.git";
     const home = makeTestHome();
     const zstackHome = join(home, ".zstack");
     mkdirSync(zstackHome, { recursive: true });
@@ -460,7 +460,7 @@ describe("zstack-gbrain-sync CLI", () => {
     // The pathhash is derived from the absolute repo path via sha1, so
     // /sync-gbrain run twice in the same worktree must converge on the same
     // source id (idempotent registration depends on this).
-    const remote = "https://github.com/garrytan/zstack.git";
+    const remote = "https://github.com/zeid/zstack.git";
     const home = makeTestHome();
     const zstackHome = join(home, ".zstack");
     mkdirSync(zstackHome, { recursive: true });
@@ -495,7 +495,7 @@ describe("zstack-gbrain-sync CLI", () => {
     mkdirSync(zstackHome, { recursive: true });
     const repo = mkdtempSync(join(tmpdir(), "zstack-legacy-cleanup-"));
     spawnSync("git", ["init", "--quiet", "-b", "main"], { cwd: repo });
-    spawnSync("git", ["remote", "add", "origin", "https://github.com/garrytan/zstack.git"], { cwd: repo });
+    spawnSync("git", ["remote", "add", "origin", "https://github.com/zeid/zstack.git"], { cwd: repo });
 
     const r = spawnSync("bun", [SCRIPT, "--dry-run", "--code-only", "--quiet"], {
       encoding: "utf-8",
@@ -531,7 +531,7 @@ describe("zstack-gbrain-sync CLI", () => {
     mkdirSync(zstackHome, { recursive: true });
     const repo = mkdtempSync(join(tmpdir(), "zstack-attach-preview-"));
     spawnSync("git", ["init", "--quiet", "-b", "main"], { cwd: repo });
-    spawnSync("git", ["remote", "add", "origin", "https://github.com/garrytan/zstack.git"], { cwd: repo });
+    spawnSync("git", ["remote", "add", "origin", "https://github.com/zeid/zstack.git"], { cwd: repo });
 
     const r = spawnSync("bun", [SCRIPT, "--dry-run", "--code-only", "--quiet"], {
       encoding: "utf-8",

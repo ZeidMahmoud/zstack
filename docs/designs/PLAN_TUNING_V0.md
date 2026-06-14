@@ -1,13 +1,13 @@
 # Plan Tuning v0 — Design Doc
 
 **Status:** Approved for v1 implementation
-**Branch:** garrytan/plan-tune-skill
-**Authors:** Garry Tan (user), with AI-assisted reviews from Claude Opus 4.7 + OpenAI Codex gpt-5.4
+**Branch:** zeid/plan-tune-skill
+**Authors:** the author (user), with AI-assisted reviews from Claude Opus 4.7 + OpenAI Codex gpt-5.4
 **Date:** 2026-04-16
 
 ## What this document is
 
-A canonical record of what `/plan-tune` v1 is, what it is NOT, what we considered, and why we made each call. Committed to the repo so future contributors (and future Garry) can trace reasoning without archeology. Supersedes the two `~/.zstack/projects/` artifacts (office-hours design doc + CEO plan) which are per-user local records.
+A canonical record of what `/plan-tune` v1 is, what it is NOT, what we considered, and why we made each call. Committed to the repo so future contributors (and future the author) can trace reasoning without archeology. Supersedes the two `~/.zstack/projects/` artifacts (office-hours design doc + CEO plan) which are per-user local records.
 
 ## The feature, in one paragraph
 
@@ -358,7 +358,7 @@ Initial user position (office-hours): "The psychographic IS the differentiation.
 - Migration from `~/.zstack/builder-profile.jsonl` preserves 100% of sessions + signals_accumulated. Regression test with 7-session fixture.
 - One-way door registry-declared entries: 100% of destructive ops, architecture forks, scope-adds > 1 day CC effort, security/compliance choices are classified `one-way`.
 - User-origin gate test: attempting to write a tune event with `source: "inline-tool-output"` is rejected.
-- Dogfood: Garry uses `/plan-tune` for 2+ weeks. Reports back whether:
+- Dogfood: the author uses `/plan-tune` for 2+ weeks. Reports back whether:
   - `tune: never-ask` felt natural to type or got ignored
   - Registry maintenance (adding new questions) felt like reasonable discipline or schema bureaucracy
   - Inferred dimensions were stable across sessions or noisy
@@ -402,4 +402,4 @@ Initial user position (office-hours): "The psychographic IS the differentiation.
 
 ## Credits and caveats
 
-This plan was developed through an iterative AI-collaboration loop over ~6 hours of planning. The author (Garry Tan) directed every scope decision; AI voices (Claude Opus 4.7 and OpenAI Codex gpt-5.4) challenged and refined the plan. Without Codex's outside voice, a much larger and less-defensible plan would have shipped. The value of cross-model review on high-stakes architectural changes is real and measurable.
+This plan was developed through an iterative AI-collaboration loop over ~6 hours of planning. The author (the author) directed every scope decision; AI voices (Claude Opus 4.7 and OpenAI Codex gpt-5.4) challenged and refined the plan. Without Codex's outside voice, a much larger and less-defensible plan would have shipped. The value of cross-model review on high-stakes architectural changes is real and measurable.

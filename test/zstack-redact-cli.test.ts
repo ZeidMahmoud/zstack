@@ -69,8 +69,8 @@ describe("zstack-redact --allowlist", () => {
 describe("zstack-redact --self-email", () => {
   test("own email is not flagged", () => {
     const { code } = run(
-      ["--repo-visibility", "public", "--self-email", "me@garry.dev"],
-      "from me@garry.dev",
+      ["--repo-visibility", "public", "--self-email", "me@zeid.dev"],
+      "from me@zeid.dev",
     );
     expect(code).toBe(0);
   });

@@ -35,5 +35,5 @@ extension/lib/xterm-addon-fit.js
 !.env.example
 supabase/.temp/
 
-# Throughput analysis — local-only, regenerate via scripts/garry-output-comparison.ts
+# Throughput analysis — local-only, regenerate via scripts/output-comparison.ts
 docs/throughput-*.json

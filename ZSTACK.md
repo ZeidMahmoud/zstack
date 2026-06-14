@@ -11,10 +11,11 @@ CLI binary names (`bin/zstack-*`), config paths (`~/.zstack/`, `~/.zstack-dev/`)
 vars (`ZSTACK_*`), and skill names (`/open-zstack-browser`, `zstack-upgrade`, etc.).
 
 > Provenance, in plain terms: the upstream tool, its philosophy (`ETHOS.md`), and the
-> founder voice throughout the skill prose are Garry Tan's work on gstack. zstack is a
-> local fork for personal use, not a competing product or a claim of authorship over
-> that material. If you push this anywhere public, keep the MIT `LICENSE` and the
-> attribution intact.
+> original founder voice are Garry Tan's work on gstack (MIT licensed). zstack removes the
+> personal persona from the product's voice and reframes it as a neutral tool, but it does
+> not erase authorship. This is a local fork for personal use, not a competing product or a
+> claim of authorship over the original. If you push this anywhere public, keep the MIT
+> `LICENSE` (which names both copyright holders) intact.
 
 ## Layout
 

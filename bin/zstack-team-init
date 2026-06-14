@@ -54,11 +54,11 @@ fi
 if [ "$MODE" = "optional" ]; then
   SNIPPET='## zstack (recommended)
 
-This project uses [zstack](https://github.com/garrytan/zstack) for AI-assisted workflows.
+This project uses [zstack](https://github.com/zeid/zstack) for AI-assisted workflows.
 Install it for the best experience:
 
 ```bash
-git clone --depth 1 https://github.com/garrytan/zstack.git ~/.claude/skills/zstack
+git clone --depth 1 https://github.com/zeid/zstack.git ~/.claude/skills/zstack
 cd ~/.claude/skills/zstack && ./setup --team
 ```
 
@@ -78,7 +78,7 @@ If ZSTACK_MISSING: STOP. Do not proceed. Tell the user:
 > zstack is required for all AI-assisted work in this repo.
 > Install it:
 > ```bash
-> git clone --depth 1 https://github.com/garrytan/zstack.git ~/.claude/skills/zstack
+> git clone --depth 1 https://github.com/zeid/zstack.git ~/.claude/skills/zstack
 > cd ~/.claude/skills/zstack && ./setup --team
 > ```
 > Then restart your AI coding tool.
@@ -122,7 +122,7 @@ BLOCKED: zstack is not installed globally.
 zstack is required for AI-assisted work in this repo.
 
 Install it:
-  git clone --depth 1 https://github.com/garrytan/zstack.git ~/.claude/skills/zstack
+  git clone --depth 1 https://github.com/zeid/zstack.git ~/.claude/skills/zstack
   cd ~/.claude/skills/zstack && ./setup --team
 
 Then restart your AI coding tool.
@@ -188,5 +188,5 @@ if [ ${#GENERATED[@]} -gt 0 ]; then
 fi
 echo ""
 echo "Each developer then runs:"
-echo "  git clone --depth 1 https://github.com/garrytan/zstack.git ~/.claude/skills/zstack"
+echo "  git clone --depth 1 https://github.com/zeid/zstack.git ~/.claude/skills/zstack"
 echo "  cd ~/.claude/skills/zstack && ./setup --team"

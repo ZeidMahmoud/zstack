@@ -28,7 +28,7 @@ allowed-tools:
 
 # /setup-gbrain — Coding-Agent Onboarding for gbrain
 
-You are setting up gbrain (https://github.com/garrytan/gbrain), a persistent
+You are setting up gbrain (https://github.com/zeid/gbrain), a persistent
 knowledge base, on the user's local Mac so that this coding agent (typically
 Claude Code) can call it as both a CLI and an MCP tool.
 
@@ -83,7 +83,7 @@ invocation flags here and skip to the matching step.
 
 Read `gbrain_local_status` from the Step 1 detect output. **If it's `broken-db`
 or `broken-config` AND no shortcut flag was passed**, the user has a
-non-working local engine (Garry's repro: `~/.gbrain/config.json` points at a
+non-working local engine (known repro: `~/.gbrain/config.json` points at a
 dead Postgres URL). Fire a targeted AskUserQuestion BEFORE Step 2:
 
 > D# — Your local gbrain engine isn't responding. How do you want to fix it?

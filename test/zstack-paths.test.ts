@@ -59,7 +59,7 @@ describe('zstack-paths', () => {
   test('CLAUDE_PLUGIN_DATA respected when CLAUDE_PLUGIN_ROOT identifies zstack', () => {
     const got = run({
       CLAUDE_PLUGIN_DATA: '/tmp/zstack-plugin-data',
-      CLAUDE_PLUGIN_ROOT: '/tmp/zstack-garrytan',
+      CLAUDE_PLUGIN_ROOT: '/tmp/zstack-zeid',
       HOME: '/tmp/home',
     });
     expect(got.ZSTACK_STATE_ROOT).toBe('/tmp/zstack-plugin-data');

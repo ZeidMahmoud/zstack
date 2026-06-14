@@ -93,16 +93,6 @@
       "routing": "Blocks Edit and\nWrite outside the allowed path. Use when debugging to prevent accidentally\n\"fixing\" unrelated code, or when you want to scope changes to one module.\nUse when asked to \"freeze\", \"restrict edits\", \"only edit this folder\",\nor \"lock down edits\".",
       "voice_line": null
     },
-    "zstack": {
-      "lead": "Fast headless browser for QA testing and site dogfooding.",
-      "routing": "Navigate pages, interact with\nelements, verify state, diff before/after, take annotated screenshots, test responsive\nlayouts, forms, uploads, dialogs, and capture bug evidence. Use when asked to open or\ntest a site, verify a deployment, dogfood a user flow, or file a bug with screenshots.",
-      "voice_line": null
-    },
-    "zstack-upgrade": {
-      "lead": "Upgrade zstack to the latest version.",
-      "routing": "Detects global vs vendored install,\nruns the upgrade, and shows what's new. Use when asked to \"upgrade zstack\",\n\"update zstack\", or \"get latest version\".",
-      "voice_line": "Voice triggers (speech-to-text aliases): \"upgrade the tools\", \"update the tools\", \"gee stack upgrade\", \"g stack upgrade\"."
-    },
     "guard": {
       "lead": "Full safety mode: destructive command warnings + directory-scoped edits.",
       "routing": "Combines /careful (warns before rm -rf, DROP TABLE, force-push, etc.) with\n/freeze (blocks edits outside a specified directory). Use for maximum safety\nwhen touching prod or debugging live systems. Use when asked to \"guard mode\",\n\"full safety\", \"lock it down\", or \"maximum safety\".",
@@ -267,6 +257,16 @@
       "lead": "Clear the freeze boundary set by /freeze, allowing edits to all directories again.",
       "routing": "Use when you want to widen edit scope without ending the session.\nUse when asked to \"unfreeze\", \"unlock edits\", \"remove freeze\", or\n\"allow all edits\".",
       "voice_line": null
+    },
+    "zstack": {
+      "lead": "Fast headless browser for QA testing and site dogfooding.",
+      "routing": "Navigate pages, interact with\nelements, verify state, diff before/after, take annotated screenshots, test responsive\nlayouts, forms, uploads, dialogs, and capture bug evidence. Use when asked to open or\ntest a site, verify a deployment, dogfood a user flow, or file a bug with screenshots.",
+      "voice_line": null
+    },
+    "zstack-upgrade": {
+      "lead": "Upgrade zstack to the latest version.",
+      "routing": "Detects global vs vendored install,\nruns the upgrade, and shows what's new. Use when asked to \"upgrade zstack\",\n\"update zstack\", or \"get latest version\".",
+      "voice_line": "Voice triggers (speech-to-text aliases): \"upgrade the tools\", \"update the tools\", \"gee stack upgrade\", \"g stack upgrade\"."
     }
   }
 }

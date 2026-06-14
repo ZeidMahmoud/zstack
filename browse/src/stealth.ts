@@ -12,7 +12,7 @@
  *   2. EXTENDED (opt-in via ZSTACK_STEALTH=extended): six additional
  *      detection-vector patches on top of the default. Closes the
  *      SannySoft test corpus to a 100% pass rate. Originally proposed in
- *      PR #1112 (garrytan, Apr 2026).
+ *      PR #1112 (zeid, Apr 2026).
  *
  *      Vectors patched in extended mode:
  *        - navigator.webdriver property fully deleted from prototype
