@@ -94,10 +94,9 @@ trap 'rm -rf "$STAGE"' EXIT
 stage "$STAGE"
 
 # ─── 2. replace ──────────────────────────────────────────────────
-git ls-files -z | grep -zEv "$PRESERVE_RE" | xargs -0 -r git rm -q --cached --
-git ls-files -z --others --exclude-standard | grep -zEv "$PRESERVE_RE" | xargs -0 -r rm -f --
-# remove now-untracked leftovers that were tracked a moment ago
-git ls-files -z --others | grep -zEv "$PRESERVE_RE" | xargs -0 -r rm -f --
+# (grep -v exits 1 when it filters everything out; that is not an error here)
+git ls-files -z | { grep -zEv "$PRESERVE_RE" || true; } | xargs -0 -r git rm -q --cached --
+git ls-files -z --others --exclude-standard | { grep -zEv "$PRESERVE_RE" || true; } | xargs -0 -r rm -f --
 find . -mindepth 1 -type d -empty -not -path './.git*' -delete 2>/dev/null || true
 cp -a "$STAGE"/. .
 # -f: upstream's own .gitignore (bin/gstack-global-discover*) would otherwise
