@@ -48,12 +48,17 @@ PRESERVE_RE='^(ZSTACK\.md|claude-extras/|scripts/sync-upstream\.sh|zstack-overla
 [ -d "$UPSTREAM/.git" ] || [ -f "$UPSTREAM/.git" ] || { echo "not a git checkout: $UPSTREAM" >&2; exit 1; }
 
 # ─── rebrand helpers ─────────────────────────────────────────────
+# The content rewrite also repoints every github.com/garrytan/gstack reference
+# (which the rename would otherwise turn into the nonexistent garrytan/zstack)
+# at this fork, so update checks, clone URLs and raw VERSION lookups resolve.
+REBRAND_SED='s/gstack/zstack/g; s/GSTACK/ZSTACK/g; s/GStack/ZStack/g; s/Gstack/Zstack/g'
+CONTENT_SED="$REBRAND_SED; s#garrytan/zstack#ZeidMahmoud/zstack#g"
 rebrand_path() {
-  printf '%s' "$1" | sed 's/gstack/zstack/g; s/GSTACK/ZSTACK/g; s/GStack/ZStack/g; s/Gstack/Zstack/g'
+  printf '%s' "$1" | sed "$REBRAND_SED"
 }
 rebrand_file() { # src dst
   if [ -s "$1" ] && grep -Iq . "$1"; then
-    sed 's/gstack/zstack/g; s/GSTACK/ZSTACK/g; s/GStack/ZStack/g; s/Gstack/Zstack/g' "$1" > "$2"
+    sed "$CONTENT_SED" "$1" > "$2"
     chmod --reference="$1" "$2"
   else
     cp -p "$1" "$2"
