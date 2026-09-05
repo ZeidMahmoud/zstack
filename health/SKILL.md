@@ -1,5 +1,5 @@
 ---
-name: health
+name: zstack-health
 preamble-tier: 2
 version: 1.0.0
 description: Code quality dashboard. (zstack)

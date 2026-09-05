@@ -1,5 +1,5 @@
 ---
-name: open-zstack-browser
+name: zstack-open-zstack-browser
 preamble-tier: 1
 version: 0.2.0
 description: Launch ZStack Browser — AI-controlled Chromium with the sidebar extension baked in.

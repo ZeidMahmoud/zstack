@@ -1,5 +1,5 @@
 ---
-name: benchmark
+name: zstack-benchmark
 preamble-tier: 1
 version: 1.0.0
 description: Performance regression detection using the browse daemon. (zstack)

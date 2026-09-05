@@ -1,5 +1,5 @@
 ---
-name: freeze
+name: zstack-freeze
 version: 0.1.0
 description: Restrict file edits to a specific directory for the session. (zstack)
 triggers:

@@ -1,5 +1,5 @@
 ---
-name: plan-tune
+name: zstack-plan-tune
 preamble-tier: 2
 version: 1.0.0
 description: "Self-tuning question sensitivity + developer psychographic for zstack (v1: observational). (zstack)"

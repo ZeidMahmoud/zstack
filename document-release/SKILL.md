@@ -1,5 +1,5 @@
 ---
-name: document-release
+name: zstack-document-release
 preamble-tier: 2
 version: 1.0.0
 description: Post-ship documentation update. (zstack)

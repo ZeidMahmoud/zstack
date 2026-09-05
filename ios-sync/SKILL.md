@@ -1,5 +1,5 @@
 ---
-name: ios-sync
+name: zstack-ios-sync
 preamble-tier: 2
 version: 1.0.0
 description: Regenerate the iOS debug bridge against the latest upstream zstack templates. (zstack)

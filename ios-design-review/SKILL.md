@@ -1,5 +1,5 @@
 ---
-name: ios-design-review
+name: zstack-ios-design-review
 preamble-tier: 2
 version: 1.0.0
 description: Visual design audit for iOS apps on real hardware. (zstack)

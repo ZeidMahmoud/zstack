@@ -1,5 +1,5 @@
 ---
-name: benchmark-models
+name: zstack-benchmark-models
 preamble-tier: 1
 version: 1.0.0
 description: Cross-model benchmark for zstack skills. (zstack)

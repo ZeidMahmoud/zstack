@@ -1,5 +1,5 @@
 ---
-name: design-review
+name: zstack-design-review
 preamble-tier: 4
 version: 2.0.0
 description: "Designer's eye QA: finds visual inconsistency, spacing issues, hierarchy problems, AI slop patterns, and slow interactions — then fixes them. (zstack)"

@@ -1,5 +1,5 @@
 ---
-name: design-shotgun
+name: zstack-design-shotgun
 preamble-tier: 2
 version: 1.0.0
 description: "Design shotgun: generate multiple AI design variants, open a comparison board, collect structured feedback, and iterate. (zstack)"

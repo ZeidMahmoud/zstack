@@ -1,5 +1,5 @@
 ---
-name: qa-only
+name: zstack-qa-only
 preamble-tier: 4
 version: 1.0.0
 description: Report-only QA testing. (zstack)

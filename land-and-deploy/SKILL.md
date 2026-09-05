@@ -1,5 +1,5 @@
 ---
-name: land-and-deploy
+name: zstack-land-and-deploy
 preamble-tier: 4
 version: 1.0.0
 description: Land and deploy workflow. (zstack)

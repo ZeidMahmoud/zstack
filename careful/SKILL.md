@@ -1,5 +1,5 @@
 ---
-name: careful
+name: zstack-careful
 version: 0.1.0
 description: Safety guardrails for destructive commands. (zstack)
 triggers:

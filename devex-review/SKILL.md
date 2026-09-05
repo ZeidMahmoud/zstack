@@ -1,5 +1,5 @@
 ---
-name: devex-review
+name: zstack-devex-review
 preamble-tier: 3
 version: 1.0.0
 description: Live developer experience audit. (zstack)

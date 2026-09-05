@@ -1,5 +1,5 @@
 ---
-name: make-pdf
+name: zstack-make-pdf
 preamble-tier: 1
 version: 1.0.0
 description: Turn any markdown file into a publication-quality PDF. (zstack)

@@ -1,5 +1,5 @@
 ---
-name: plan-ceo-review
+name: zstack-plan-ceo-review
 preamble-tier: 3
 version: 1.0.0
 description: CEO/founder-mode plan review. (zstack)
