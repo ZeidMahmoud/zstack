@@ -1,1 +1,0 @@
-/home/zeid/.claude/skills/gstack/qa/SKILL.md

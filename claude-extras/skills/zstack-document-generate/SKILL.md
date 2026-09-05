@@ -1,0 +1,1 @@
+/home/zeid/d/zstack/document-generate/SKILL.md

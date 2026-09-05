@@ -1,1 +1,0 @@
-/home/zeid/.claude/skills/gstack/land-and-deploy/SKILL.md

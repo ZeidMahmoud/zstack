@@ -1,0 +1,1 @@
+/home/zeid/d/zstack/setup-deploy/SKILL.md

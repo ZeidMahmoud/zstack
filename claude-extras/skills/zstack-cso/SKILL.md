@@ -1,0 +1,1 @@
+/home/zeid/d/zstack/cso/SKILL.md

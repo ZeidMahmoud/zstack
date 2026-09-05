@@ -1,1 +1,0 @@
-/home/zeid/.claude/skills/gstack/design-shotgun/SKILL.md

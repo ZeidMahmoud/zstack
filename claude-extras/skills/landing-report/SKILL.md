@@ -1,1 +1,0 @@
-/home/zeid/.claude/skills/gstack/landing-report/SKILL.md

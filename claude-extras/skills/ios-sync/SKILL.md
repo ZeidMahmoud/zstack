@@ -1,1 +1,0 @@
-/home/zeid/.claude/skills/gstack/ios-sync/SKILL.md

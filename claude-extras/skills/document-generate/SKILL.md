@@ -1,1 +1,0 @@
-/home/zeid/.claude/skills/gstack/document-generate/SKILL.md
