@@ -20,10 +20,15 @@
 #
 # Usage:
 #   scripts/sync-upstream.sh [--upstream DIR] [--stage-only DIR] [--no-regen]
+#   scripts/sync-upstream.sh --refresh-overlay [--upstream DIR]
 #
 #   --upstream DIR    upstream gstack checkout (default ~/.claude/skills/gstack)
 #   --stage-only DIR  only run step 1 into DIR and exit (used by the self-test)
 #   --no-regen        skip step 4
+#   --refresh-overlay after you have resolved conflicts and committed, rewrite
+#                     zstack-overlay/01-remove-founder-persona.patch as the diff
+#                     between a pure rebrand of the upstream and HEAD (generated
+#                     SKILL.md files excluded), so the next sync applies cleanly
 #
 # Review `git status` / `git diff --stat` afterwards, run the tests, then
 # commit. Nothing here commits or pushes.
@@ -32,11 +37,13 @@ set -euo pipefail
 UPSTREAM="${HOME}/.claude/skills/gstack"
 STAGE_ONLY=""
 REGEN=1
+REFRESH=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --upstream)   UPSTREAM="$2"; shift 2 ;;
     --stage-only) STAGE_ONLY="$2"; shift 2 ;;
     --no-regen)   REGEN=0; shift ;;
+    --refresh-overlay) REFRESH=1; shift ;;
     -h|--help)    sed -n '2,30p' "$0"; exit 0 ;;
     *) echo "unknown arg: $1" >&2; exit 2 ;;
   esac
@@ -85,6 +92,30 @@ stage() { # dest
 
 if [ -n "$STAGE_ONLY" ]; then
   stage "$STAGE_ONLY"
+  exit 0
+fi
+
+if [ "$REFRESH" -eq 1 ]; then
+  cd "$REPO"
+  [ -z "$(git status --porcelain)" ] || { echo "working tree is dirty; commit first" >&2; exit 1; }
+  STAGE="$(mktemp -d "${TMPDIR:-/tmp}/zstack-stage-XXXXXX")"
+  trap 'rm -rf "$STAGE"' EXIT
+  stage "$STAGE"
+  out="zstack-overlay/01-remove-founder-persona.patch"
+  # Only files that exist in the pure rebrand can be overlaid; new files are
+  # preserved-set material, not overlay material.
+  : > "$out.tmp"
+  while IFS= read -r f; do
+    case "$f" in
+      SKILL.md|*/SKILL.md|ZSTACK.md|claude-extras/*|scripts/sync-upstream.sh|zstack-overlay/*) continue ;;
+    esac
+    [ -f "$STAGE/$f" ] || continue
+    if ! cmp -s "$STAGE/$f" "$f"; then
+      git diff --no-index --no-color "$STAGE/$f" "$f" | sed "s#$STAGE/#a/#; s#^+++ $f#+++ b/$f#; s#^diff --git a/$f $f#diff --git a/$f b/$f#" >> "$out.tmp" || true
+    fi
+  done < <(git ls-files)
+  mv "$out.tmp" "$out"
+  echo "rewrote $out ($(grep -c '^diff --git' "$out") files)"
   exit 0
 fi
 
