@@ -68,6 +68,39 @@ index 8bd3c9b..f47d58b 100644
  - **Tech leads and staff engineers** — rigorous review, QA, and release automation on every PR
  
  ## Quick start
+diff --git aa/bin/zstack-relink b/bin/zstack-relink
+index 025ead5..99ac128 100755
+--- aa/bin/zstack-relink
++++ b/bin/zstack-relink
+@@ -43,12 +43,25 @@ PREFIX=$("$ZSTACK_CONFIG" get skill_prefix 2>/dev/null || echo "false")
+ RENDER_DIR="${ZSTACK_USER_RENDER_DIR:-${ZSTACK_HOME:-$HOME/.zstack}/render/claude}"
+ 
+ # Helper: remove old skill entry (symlink or real directory with symlinked SKILL.md)
++# Only entries that resolve into this install (or its render dir) are ours to
++# remove. A same-named entry owned by another skill suite installed side by
++# side (e.g. gstack's flat /review next to our /zstack-review) is left alone;
++# without this guard every prefixed setup run wiped the other suite's skills.
++_owned_by_us() {
++  local dest="$1"
++  case "$dest" in
++    "$INSTALL_DIR"/*|"$RENDER_DIR"/*|zstack/*|*/zstack/*|*/.zstack/render/claude/*) return 0 ;;
++  esac
++  return 1
++}
+ _cleanup_skill_entry() {
+-  local entry="$1"
++  local entry="$1" dest
+   if [ -L "$entry" ]; then
+-    rm -f "$entry"
++    dest="$(readlink "$entry" 2>/dev/null || true)"
++    _owned_by_us "$dest" && rm -f "$entry"
+   elif [ -d "$entry" ] && [ -L "$entry/SKILL.md" ]; then
+-    rm -rf "$entry"
++    dest="$(readlink "$entry/SKILL.md" 2>/dev/null || true)"
++    _owned_by_us "$dest" && rm -rf "$entry"
+   fi
+ }
+ 
 diff --git aa/package.json b/package.json
 index 4397824..3441b56 100644
 --- aa/package.json
