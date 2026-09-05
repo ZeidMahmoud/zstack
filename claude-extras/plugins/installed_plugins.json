@@ -13,51 +13,60 @@
     "frontend-design@claude-plugins-official": [
       {
         "scope": "user",
-        "installPath": "/home/zeid/.claude/plugins/cache/claude-plugins-official/frontend-design/unknown",
-        "version": "unknown",
+        "installPath": "/home/zeid/.claude/plugins/cache/claude-plugins-official/frontend-design/85cce0381e78",
+        "version": "85cce0381e78",
         "installedAt": "2026-05-30T08:56:18.821Z",
-        "lastUpdated": "2026-06-10T05:04:27.657Z",
-        "gitCommitSha": "de573bd84695c6657b28f05ffe32c37bb54d1f55"
+        "lastUpdated": "2026-09-04T22:40:33.457Z",
+        "gitCommitSha": "85cce0381e7860082641b59d961a2b8c368b8b79"
       }
     ],
     "superpowers@claude-plugins-official": [
       {
         "scope": "user",
-        "installPath": "/home/zeid/.claude/plugins/cache/claude-plugins-official/superpowers/5.1.0",
-        "version": "5.1.0",
+        "installPath": "/home/zeid/.claude/plugins/cache/claude-plugins-official/superpowers/6.3.0",
+        "version": "6.3.0",
         "installedAt": "2026-05-30T08:56:45.759Z",
-        "lastUpdated": "2026-05-30T08:56:45.759Z",
+        "lastUpdated": "2026-08-13T00:54:10.510Z",
         "gitCommitSha": "f2cbfbefebbfef77321e4c9abc9e949826bea9d7"
       }
     ],
     "context7@claude-plugins-official": [
       {
         "scope": "user",
-        "installPath": "/home/zeid/.claude/plugins/cache/claude-plugins-official/context7/unknown",
-        "version": "unknown",
+        "installPath": "/home/zeid/.claude/plugins/cache/claude-plugins-official/context7/85cce0381e78",
+        "version": "85cce0381e78",
         "installedAt": "2026-05-30T08:56:52.436Z",
-        "lastUpdated": "2026-06-10T05:04:27.656Z",
-        "gitCommitSha": "de573bd84695c6657b28f05ffe32c37bb54d1f55"
+        "lastUpdated": "2026-09-04T22:40:33.458Z",
+        "gitCommitSha": "85cce0381e7860082641b59d961a2b8c368b8b79"
       }
     ],
     "github@claude-plugins-official": [
       {
         "scope": "user",
-        "installPath": "/home/zeid/.claude/plugins/cache/claude-plugins-official/github/unknown",
-        "version": "unknown",
+        "installPath": "/home/zeid/.claude/plugins/cache/claude-plugins-official/github/85cce0381e78",
+        "version": "85cce0381e78",
         "installedAt": "2026-05-30T08:57:00.279Z",
-        "lastUpdated": "2026-06-10T05:04:27.654Z",
-        "gitCommitSha": "de573bd84695c6657b28f05ffe32c37bb54d1f55"
+        "lastUpdated": "2026-09-04T22:40:33.457Z",
+        "gitCommitSha": "85cce0381e7860082641b59d961a2b8c368b8b79"
       }
     ],
     "code-review@claude-plugins-official": [
       {
         "scope": "user",
-        "installPath": "/home/zeid/.claude/plugins/cache/claude-plugins-official/code-review/unknown",
-        "version": "unknown",
+        "installPath": "/home/zeid/.claude/plugins/cache/claude-plugins-official/code-review/85cce0381e78",
+        "version": "85cce0381e78",
         "installedAt": "2026-05-30T08:57:06.200Z",
-        "lastUpdated": "2026-06-10T05:04:27.656Z",
-        "gitCommitSha": "de573bd84695c6657b28f05ffe32c37bb54d1f55"
+        "lastUpdated": "2026-09-04T22:40:33.456Z",
+        "gitCommitSha": "85cce0381e7860082641b59d961a2b8c368b8b79"
+      }
+    ],
+    "rust-analyzer-lsp@claude-plugins-official": [
+      {
+        "scope": "user",
+        "installPath": "/home/zeid/.claude/plugins/cache/claude-plugins-official/rust-analyzer-lsp/1.0.0",
+        "version": "1.0.0",
+        "installedAt": "2026-07-29T11:29:58.265Z",
+        "lastUpdated": "2026-07-29T11:29:58.265Z"
       }
     ]
   }

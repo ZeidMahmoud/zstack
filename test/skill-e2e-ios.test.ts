@@ -12,7 +12,7 @@
 // daemon source (ios-qa/daemon/test/*). This file tests the agent-flow
 // boundary — what the /ios-qa skill orchestrates end-to-end.
 
-import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
+import { describe, test, expect, afterAll } from 'bun:test';
 import { createServer, type Server, type IncomingMessage } from 'http';
 import { mkdtempSync, rmSync, mkdirSync, writeFileSync, existsSync, readFileSync } from 'fs';
 import { tmpdir } from 'os';
@@ -26,14 +26,27 @@ const HAS_DEVICE = process.env.ZSTACK_HAS_IOS_DEVICE === '1';
 
 const DEVICE_TOKEN = 'rotated-mock-bearer-token';
 
-let workDir: string;
+// Per-test isolation under `bun test --concurrent`: a single module-level
+// `workDir` reassigned in beforeEach is clobbered by parallel tests, so they
+// collide on the same daemon pidfile (`already_running`) and stomp each
+// other's ZSTACK_IOS_* env paths. Each test calls makeWorkDir() for its own
+// dir instead; afterEach cleans up every dir created during the test.
+const createdWorkDirs: string[] = [];
+function makeWorkDir(): string {
+  const dir = mkdtempSync(join(tmpdir(), 'ios-e2e-'));
+  createdWorkDirs.push(dir);
+  return dir;
+}
 
-beforeEach(() => {
-  workDir = mkdtempSync(join(tmpdir(), 'ios-e2e-'));
-});
-
-afterEach(() => {
-  rmSync(workDir, { recursive: true, force: true });
+// Clean up ONCE after all tests, not per-test. Under `bun test --concurrent`
+// an afterEach that drains the shared array would delete still-running tests'
+// workDirs the moment ANY test finishes, vanishing their audit/attempts files
+// mid-assertion. afterAll runs after every concurrent test has settled.
+afterAll(() => {
+  for (const dir of createdWorkDirs) {
+    rmSync(dir, { recursive: true, force: true });
+  }
+  createdWorkDirs.length = 0;
 });
 
 interface StubState {
@@ -152,14 +165,18 @@ async function fetchJson(method: string, url: string, init: { headers?: Record<s
 
 describe('ios-qa E2E (no-device path)', () => {
   test('NO_DEVICE: codegen runs against a SwiftUI fixture and emits valid accessors', () => {
+    const workDir = makeWorkDir();
     const srcDir = join(workDir, 'app-src');
     mkdirSync(srcDir);
     writeFileSync(join(srcDir, 'AppState.swift'), `
 @Observable
 class AppState {
-    @Snapshotable var isLoggedIn: Bool = false
-    @Snapshotable var username: String = ""
-    @Snapshotable var counter: Int = 0
+    // @Snapshotable
+    var isLoggedIn: Bool = false
+    // @Snapshotable
+    var username: String = ""
+    // @Snapshotable
+    var counter: Int = 0
     var ephemeralCache: [String: Any] = [:]
 }
 `);
@@ -175,7 +192,8 @@ class AppState {
     expect(result.specs).toHaveLength(1);
     expect(result.specs[0]!.fields.map(f => f.name).sort()).toEqual(['counter', 'isLoggedIn', 'username']);
     const generatedSwift = readFileSync(result.outputPath, 'utf-8');
-    expect(generatedSwift).toContain('public enum AppStateAccessor');
+    expect(generatedSwift).toContain('enum AppStateAccessor');
+    expect(generatedSwift).not.toContain('public enum AppStateAccessor');
     expect(generatedSwift).toContain('key: "isLoggedIn"');
     expect(generatedSwift).toContain('key: "counter"');
     expect(generatedSwift).not.toContain('key: "ephemeralCache"'); // not marked @Snapshotable
@@ -183,6 +201,7 @@ class AppState {
   });
 
   test('NO_DEVICE: cache hit on rerun', () => {
+    const workDir = makeWorkDir();
     const srcDir = join(workDir, 'app-src');
     mkdirSync(srcDir);
     writeFileSync(join(srcDir, 'AppState.swift'), '@Observable class A { @Snapshotable var x: Int = 0 }');
@@ -194,6 +213,7 @@ class AppState {
   });
 
   test('NO_DEVICE: schema mismatch returns 409 on restore', async () => {
+    const workDir = makeWorkDir();
     const stub = await startStubStateServer({ loggedIn: false, username: '', rawTaps: [] });
     try {
       const tunnel: DeviceTunnel = {
@@ -237,6 +257,7 @@ class AppState {
 
 describe('ios-qa E2E (agent-flow simulation)', () => {
   test('SCENARIO: acquire → snapshot → restore → tap → release', async () => {
+    const workDir = makeWorkDir();
     const initial: StubState = { loggedIn: false, username: '', rawTaps: [] };
     const stub = await startStubStateServer(initial);
     try {
@@ -303,6 +324,7 @@ describe('ios-qa E2E (agent-flow simulation)', () => {
   });
 
   test('SCENARIO: contention — second session-acquire returns 423 while first holds', async () => {
+    const workDir = makeWorkDir();
     const stub = await startStubStateServer({ loggedIn: false, username: '', rawTaps: [] });
     try {
       const tunnel: DeviceTunnel = {
@@ -333,14 +355,16 @@ describe('ios-qa E2E (agent-flow simulation)', () => {
   });
 
   test('SCENARIO: tailnet allowlist gate + mint + audit log', async () => {
+    const workDir = makeWorkDir();
     const stub = await startStubStateServer({ loggedIn: false, username: '', rawTaps: [] });
     try {
       const allowPath = join(workDir, 'allowlist.json');
       const auditPath = join(workDir, 'audit.jsonl');
       const attemptsPath = join(workDir, 'attempts.jsonl');
-      process.env.ZSTACK_IOS_ALLOWLIST_PATH = allowPath;
-      process.env.ZSTACK_IOS_AUDIT_PATH = auditPath;
-      process.env.ZSTACK_IOS_ATTEMPTS_PATH = attemptsPath;
+      // Pass paths as daemon OPTIONS, not process.env — env is process-global
+      // and races across concurrent tests (the cause of the original
+      // intermittent failures). ZSTACK_IOS_TAILNET_BIND is read from env but
+      // is the same constant for every tailnet test, so it can't diverge.
       process.env.ZSTACK_IOS_TAILNET_BIND = '127.0.0.1';
 
       const tunnel: DeviceTunnel = {
@@ -352,6 +376,9 @@ describe('ios-qa E2E (agent-flow simulation)', () => {
       const daemon = await startDaemon({
         loopbackPort: 0,
         tailnetEnabled: true,
+        allowlistPath: allowPath,
+        auditPath,
+        attemptsPath,
         pidfilePath: join(workDir, 'daemon.pid'),
         tunnelProvider: async () => tunnel,
         probeImpl: async () => ({ ok: true, ownIdentity: 'mac@e2e' }),
@@ -406,9 +433,6 @@ describe('ios-qa E2E (agent-flow simulation)', () => {
         expect(attempts).toMatch(/"reason":"identity_not_allowed"/);
       } finally {
         await daemon.close();
-        delete process.env.ZSTACK_IOS_ALLOWLIST_PATH;
-        delete process.env.ZSTACK_IOS_AUDIT_PATH;
-        delete process.env.ZSTACK_IOS_ATTEMPTS_PATH;
         delete process.env.ZSTACK_IOS_TAILNET_BIND;
       }
     } finally {
@@ -417,19 +441,20 @@ describe('ios-qa E2E (agent-flow simulation)', () => {
   });
 
   test('SCENARIO: capability-tier enforcement — observe token cannot /tap', async () => {
+    const workDir = makeWorkDir();
     const stub = await startStubStateServer({ loggedIn: false, username: '', rawTaps: [] });
     try {
       const allowPath = join(workDir, 'allowlist.json');
-      process.env.ZSTACK_IOS_ALLOWLIST_PATH = allowPath;
-      process.env.ZSTACK_IOS_AUDIT_PATH = join(workDir, 'audit.jsonl');
-      process.env.ZSTACK_IOS_ATTEMPTS_PATH = join(workDir, 'attempts.jsonl');
-
+      // Paths via daemon options, not process.env (concurrency-safe).
       const tunnel: DeviceTunnel = {
         udid: 'CAP-UDID', ipv6Addr: '127.0.0.1', port: stub.port, bootTokenRotated: DEVICE_TOKEN,
       };
       const daemon = await startDaemon({
         loopbackPort: 0,
         tailnetEnabled: true,
+        allowlistPath: allowPath,
+        auditPath: join(workDir, 'audit.jsonl'),
+        attemptsPath: join(workDir, 'attempts.jsonl'),
         pidfilePath: join(workDir, 'daemon.pid'),
         tunnelProvider: async () => tunnel,
         probeImpl: async () => ({ ok: true, ownIdentity: 'mac@e2e' }),
@@ -463,9 +488,6 @@ describe('ios-qa E2E (agent-flow simulation)', () => {
         expect((tap.body as { error: string }).error).toBe('capability_insufficient');
       } finally {
         await daemon.close();
-        delete process.env.ZSTACK_IOS_ALLOWLIST_PATH;
-        delete process.env.ZSTACK_IOS_AUDIT_PATH;
-        delete process.env.ZSTACK_IOS_ATTEMPTS_PATH;
       }
     } finally {
       stub.server.close();
@@ -477,6 +499,7 @@ describe('ios-qa E2E (agent-flow simulation)', () => {
 
 (HAS_DEVICE ? describe : describe.skip)('ios-qa E2E (with device)', () => {
   test('WITH_DEVICE: full agent loop against a real iPhone', () => {
+    const workDir = makeWorkDir();
     // Stub — real implementation requires `devicectl` + an attached iPhone.
     // Documented in ios-qa/SKILL.md.tmpl under "Manual smoke test".
     expect(HAS_DEVICE).toBe(true);

@@ -13,7 +13,10 @@ export interface DeviceEntry {
   identifier: string;
   name: string;
   model: string;
+  platform: string; // "iOS" | "iPadOS" | "visionOS" | ...
+  deviceType: string; // "iPhone" | "iPad" | "realityDevice" | ...
   state: string; // "connected" | "available" | "available (paired)" | ...
+  transport: string; // "wired" on USB devices; empty for stale/unavailable entries
   paired: boolean;
 }
 
@@ -83,7 +86,10 @@ export function listDevices(spawn: SpawnImpl = defaultSpawn): DeviceEntry[] {
         identifier: String(d.identifier ?? ''),
         name: String(props?.name ?? 'unknown'),
         model: String(hw?.productType ?? 'unknown'),
+        platform: String(hw?.platform ?? ''),
+        deviceType: String(hw?.deviceType ?? ''),
         state: String(conn?.tunnelState ?? 'unknown'),
+        transport: String(conn?.transportType ?? ''),
         paired: pairingState === 'paired',
       };
     });
@@ -188,8 +194,8 @@ export async function getDeviceTunnelIPv6(
   resolve: ResolveImpl = defaultResolve,
 ): Promise<string | null> {
   // CoreDevice mDNS host: lowercase, spaces and apostrophes → hyphens, plus
-  // ".coredevice.local" suffix. Apple normalizes "Alex's Durendal" to
-  // "Alexs-Durendal.coredevice.local".
+  // ".coredevice.local" suffix. Apple normalizes "Garry's Durendal" to
+  // "Garrys-Durendal.coredevice.local".
   const slug = deviceName
     .replace(/['']/g, '')           // strip apostrophes
     .replace(/[\s_]+/g, '-')        // spaces/underscores → hyphens

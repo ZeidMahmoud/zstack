@@ -1,7 +1,7 @@
 # Bun-Native Prompt Injection Classifier — Research Plan
 
 **Status:** P3 research / early prototype
-**Branch:** `zeid/prompt-injection-guard`
+**Branch:** `garrytan/prompt-injection-guard`
 **Skeleton:** `browse/src/security-bunnative.ts`
 **TODOS anchor:** "Bun-native 5ms DeBERTa inference (XL, P3 / research)"
 

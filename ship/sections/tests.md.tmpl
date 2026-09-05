@@ -10,15 +10,22 @@
 `db:test:prepare` internally, which loads the schema into the correct lane database.
 Running bare test migrations without INSTANCE hits an orphan DB and corrupts structure.sql.
 
-Run both test suites in parallel:
+Run both test suites in parallel, each wrapped in the evidence ledger. The
+wrapper is transparent (streams output live, exit code passes through) and
+records `{command, exit, working-tree fingerprint, log path}` to
+`~/.zstack/projects/<slug>/<branch>-evidence.jsonl` — Step 16 cites this
+record instead of re-running when the content hasn't changed:
 
 ```bash
-bin/test-lane 2>&1 | tee /tmp/ship_tests.txt &
-npm run test 2>&1 | tee /tmp/ship_vitest.txt &
+~/.claude/skills/zstack/bin/zstack-evidence run --label tests -- 'bin/test-lane 2>&1' &
+~/.claude/skills/zstack/bin/zstack-evidence run --label vitest -- 'npm run test 2>&1' &
 wait
 ```
 
-After both complete, read the output files and check pass/fail.
+After both complete, check the `zstack-evidence: recorded label=... exit=...
+log=...` summary lines — each carries the lane's exit code and a per-run log
+file (no shared /tmp collisions between concurrent ships). Read the log files
+for failure detail.
 
 **If any test fails:** Do NOT immediately stop. Apply the Test Failure Ownership Triage:
 
@@ -75,6 +82,22 @@ EVAL_JUDGE_TIER=full EVAL_VERBOSE=1 bin/test-lane --eval test/evals/<suite>_eval
 ```
 
 If multiple suites need to run, run them sequentially (each needs a test lane). If the first suite fails, stop immediately — don't burn API cost on remaining suites.
+
+**Long eval suites (30+ min): launch detached so a turn boundary can't kill them.**
+A plain backgrounded eval lives in the harness's process group and dies to a
+SIGTERM ("polite quit") on a turn boundary, a stopped monitor, or an interruption
+(observed mid-`/ship`: `script terminated by signal SIGTERM`). Run it through
+`~/.claude/skills/zstack/bin/zstack-detach` instead — it survives in its own
+session, serializes against other worktrees via a machine lock (no API
+saturation), and writes a guaranteed `### zstack-detach EXIT=<code> ###` sentinel:
+
+```bash
+~/.claude/skills/zstack/bin/zstack-detach --label ship-evals --lock zstack-evals --timeout 5400 -- <project eval command>
+```
+
+Then poll the printed log path; break on the `EXIT=` sentinel (covers both pass
+and crash — silence is never success). The detached run survives even if your
+poller is reaped.
 
 **4. Check results:**
 

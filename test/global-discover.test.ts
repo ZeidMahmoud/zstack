@@ -43,9 +43,9 @@ describe("zstack-global-discover", () => {
     });
 
     test("SSH and HTTPS for same repo normalize to same URL", () => {
-      const ssh = normalizeRemoteUrl("git@github.com:zeid/zstack.git");
-      const https = normalizeRemoteUrl("https://github.com/zeid/zstack.git");
-      const httpsNoDotGit = normalizeRemoteUrl("https://github.com/zeid/zstack");
+      const ssh = normalizeRemoteUrl("git@github.com:ZeidMahmoud/zstack.git");
+      const https = normalizeRemoteUrl("https://github.com/ZeidMahmoud/zstack.git");
+      const httpsNoDotGit = normalizeRemoteUrl("https://github.com/ZeidMahmoud/zstack");
       expect(ssh).toBe(https);
       expect(https).toBe(httpsNoDotGit);
     });
@@ -180,10 +180,11 @@ describe("zstack-global-discover", () => {
       // Create a git repo as the session target
       const repoDir = join(tmpDir, "fake-repo");
       mkdirSync(repoDir);
-      spawnSync("git", ["init"], { cwd: repoDir, stdio: "pipe" });
+      spawnSync("git", ["init"], { cwd: repoDir, stdio: "pipe", timeout: 30_000 });
       spawnSync("git", ["commit", "--allow-empty", "-m", "init"], {
         cwd: repoDir,
         stdio: "pipe",
+        timeout: 30_000,
       });
 
       // Write a session with a 20KB first line (simulates Codex v0.117+)

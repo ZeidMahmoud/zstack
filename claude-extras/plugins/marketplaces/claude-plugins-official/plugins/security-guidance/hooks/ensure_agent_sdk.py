@@ -49,6 +49,17 @@ HOOK_PY_INCOMPATIBLE = 6  # hook interpreter is <3.10 — SDK syntax can't load
 # single-shot review. See #2154 follow-up.
 BUILT_TARGET = 7     # venv ensurepip failed → SDK pip-installed via --target
 NOOP_TARGET = 8      # --target libs already present and importable
+SKIP_COOLDOWN = 9    # a recent build was signal-killed (memory pressure) — not
+                     # retrying this session to avoid burning the user's
+                     # memory/CPU on a build that keeps getting killed. CCR
+                     # repro confirmed the dominant Linux BUILD_FAILED is a
+                     # SIGKILL/SIGSEGV of the memory-heavy venv+pip subprocess
+                     # (rc<0, empty streams). See #2154 follow-up.
+
+# How long to skip rebuilds after a signal kill. Retries at most once per
+# window so a machine whose memory frees up still recovers (just not every
+# session). Keyed by marker mtime.
+SIGNAL_KILL_COOLDOWN_SEC = 24 * 3600
 
 
 # Phase + err-kind integer encoding for sdk_bootstrap_phase / sdk_bootstrap_err.
@@ -85,6 +96,11 @@ SDK_BOOTSTRAP_ERR_CODES = {
     "proxy_auth":           8,
     "stderr_timeout":       9,   # pip stderr containing "timeout"/"timed out"
     "subprocess_timeout":   10,  # subprocess.TimeoutExpired (>120s)
+    "signal_killed":        16,  # venv/pip subprocess killed by a signal
+                                 # (rc<0 or 128+sig) — OOM-killer SIGKILL /
+                                 # RLIMIT_AS SIGSEGV, empty streams. The
+                                 # actual rc rides in sdk_bootstrap_rc. This
+                                 # is the dominant Linux failure (CCR repro).
     # Venv-stage specific categories added after PR #2112 telemetry surfaced
     # 2,406 phase=2/err=99 sessions in the first 3h of v2.0.1 — venv phase
     # failing in ways the original pip-flavored patterns didn't catch. These
@@ -165,11 +181,61 @@ def _encode_err_kind(s):
         return 0
     if s in SDK_BOOTSTRAP_ERR_CODES:
         return SDK_BOOTSTRAP_ERR_CODES[s]
+    # "signal_killed:<rc>" carries the returncode in sdk_bootstrap_rc; the
+    # category maps to the signal_killed code.
+    if s.startswith("signal_killed"):
+        return SDK_BOOTSTRAP_ERR_CODES["signal_killed"]
     # Prefix matches for the catch-all categories
     if s.startswith("exc:") or s.startswith("other:") or s == "other":
         return SDK_BOOTSTRAP_ERR_CODES["_uncategorized"]
     # Unknown string — still emit as uncategorized rather than dropping
     return SDK_BOOTSTRAP_ERR_CODES["_uncategorized"]
+
+
+def _encode_rc(err_kind):
+    """Extract the subprocess returncode embedded in a 'signal_killed:<rc>'
+    err_kind (e.g. -11 SIGSEGV / -9 SIGKILL / 139 shell-wrapped). Emitted as
+    sdk_bootstrap_rc so BQ can tell OOM-killer (-9) from RLIMIT_AS (-11).
+    Returns 0 when absent/non-numeric."""
+    if not err_kind or not err_kind.startswith("signal_killed:"):
+        return 0
+    try:
+        return int(err_kind.split(":", 1)[1])
+    except (ValueError, IndexError):
+        return 0
+
+
+def _is_signal_kill(returncode) -> bool:
+    """A subprocess killed by a signal rather than a clean non-zero exit.
+    subprocess.run (no shell, as used here) reports negative rc = -signum
+    (SIGKILL→-9 OOM-killer, SIGSEGV→-11 RLIMIT_AS, SIGABRT→-6). The 128+sig
+    forms (134/137/139) are defensive for any shell-wrapped path. Paired with
+    empty stdout+stderr this is the memory-kill signature (CCR repro)."""
+    if returncode is None:
+        return False
+    return returncode < 0 or returncode in (134, 137, 139)
+
+
+def _cooldown_remaining(state_dir) -> float:
+    """Seconds left in the signal-kill cooldown (0 if none/expired). Reads the
+    marker's mtime; a missing/unreadable marker means not in cooldown."""
+    marker = Path(state_dir) / "agent-sdk-venv.cooldown"
+    try:
+        age = time.time() - marker.stat().st_mtime
+    except OSError:
+        return 0.0
+    return max(0.0, SIGNAL_KILL_COOLDOWN_SEC - age)
+
+
+def _write_cooldown(state_dir) -> None:
+    """Start/refresh the signal-kill cooldown so we stop re-attempting a build
+    that keeps getting killed every session. Best-effort."""
+    try:
+        Path(state_dir).mkdir(parents=True, exist_ok=True)
+        (Path(state_dir) / "agent-sdk-venv.cooldown").write_text(
+            time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()))
+    except OSError:
+        pass
 
 
 def _encode_stderr_sig(err_kind):
@@ -252,6 +318,46 @@ def _probe_has_pip() -> bool:
         return False
 
 
+def _probe_alt_python() -> int:
+    """When the hook interpreter is <3.10 (HOOK_PY_INCOMPATIBLE), look for a
+    3.10+ interpreter at well-known install locations that aren't necessarily
+    on the hook's PATH — Homebrew (/opt/homebrew, /usr/local), python.org
+    framework builds, and the `py`/distro layouts. Returns the HIGHEST version
+    found encoded as major*100+minor (e.g. 312), or 0 if none.
+
+    Purpose (telemetry only, for now): size how many of the macOS Python-3.9
+    cohort actually HAVE a newer interpreter that sg-python.sh's PATH probe
+    missed — i.e. how many are RECOVERABLE by an explicit-path search vs.
+    genuinely 3.9-only. Emitted as sdk_alt_py. Existence-checks the versioned
+    binaries (cheap); a later explicit-path search would version-verify before
+    exec'ing. Probed only on the incompatible path, so healthy sessions never
+    pay for it."""
+    candidates = []
+    for minor in (14, 13, 12, 11, 10):
+        candidates += [
+            f"/opt/homebrew/bin/python3.{minor}",        # Apple-Silicon Homebrew
+            f"/usr/local/bin/python3.{minor}",           # Intel Homebrew / python.org shim
+            f"/Library/Frameworks/Python.framework/Versions/3.{minor}/bin/python3",  # python.org
+            f"/usr/bin/python3.{minor}",                 # distro-managed (Linux)
+        ]
+    best = 0
+    for path in candidates:
+        try:
+            if os.access(path, os.X_OK):
+                # path name encodes the minor; parse it back to a code
+                base = os.path.basename(path)
+                minor = None
+                if base.startswith("python3."):
+                    minor = int(base.split(".")[1])
+                elif "/Versions/3." in path:
+                    minor = int(path.split("/Versions/3.")[1].split("/")[0])
+                if minor is not None:
+                    best = max(best, 300 + minor)
+        except (OSError, ValueError, IndexError):
+            continue
+    return best
+
+
 def _pip_err_from_stderr(stderr_b):
     """Categorize a pip-install stderr into a known err_kind (the pip subset
     of SDK_BOOTSTRAP_ERR_CODES). Used by the --target fallback; mirrors the
@@ -326,12 +432,17 @@ def _build_via_target(state_dir) -> tuple[int, str, str]:
         subprocess.run(
             [sys.executable, "-m", "pip", "install",
              "--target", str(target), "--upgrade",
-             "--disable-pip-version-check", "--prefer-binary",
+             "--disable-pip-version-check", "--prefer-binary", "--no-cache-dir",
              "claude-agent-sdk"],
             capture_output=True, timeout=120, check=True,
         )
         return BUILT_TARGET, "", ""
     except subprocess.CalledProcessError as e:
+        # A --target pip install is also memory-heavy, so it too can be
+        # signal-killed under memory pressure — cool down, same as the venv path.
+        if _is_signal_kill(e.returncode):
+            _write_cooldown(state_dir)
+            return BUILD_FAILED, "pip_target", f"signal_killed:{e.returncode}"
         return BUILD_FAILED, "pip_target", _pip_err_from_stderr(e.stderr)
     except subprocess.TimeoutExpired:
         return BUILD_FAILED, "pip_target", "subprocess_timeout"
@@ -436,6 +547,14 @@ def main() -> tuple[int, str, str]:
     if _target_sdk_importable(state_dir):
         return NOOP_TARGET, "", ""
 
+    # If a recent build was signal-killed (memory pressure), don't re-attempt
+    # this session — the memory-heavy venv+pip just gets killed again, burning
+    # the user's resources. Retry at most once per cooldown window. Reached
+    # only after all no-op probes, so a machine that later gets the SDK via
+    # system/venv/target still short-circuits above.
+    if _cooldown_remaining(state_dir) > 0:
+        return SKIP_COOLDOWN, "", ""
+
     err_phase = ""
     err_kind = ""
     we_own_sentinel = False
@@ -468,14 +587,25 @@ def main() -> tuple[int, str, str]:
         # --prefer-binary tells pip to pick it. Cross-platform safe: no-op
         # on platforms where the latest version already has a wheel.
         err_phase = "pip"
+        # --no-cache-dir trims pip's peak memory (no cache read/write/unpack
+        # buffering) — helps marginal low-memory machines get under the OOM
+        # threshold that kills the dominant Linux builds (CCR repro).
         subprocess.run(
             [str(venv_py), "-m", "pip", "install", "--quiet",
-             "--disable-pip-version-check", "--prefer-binary",
+             "--disable-pip-version-check", "--prefer-binary", "--no-cache-dir",
              "claude-agent-sdk"],
             capture_output=True, timeout=120, check=True,
         )
         return BUILT, "", ""
     except subprocess.CalledProcessError as e:
+        # Signal kill (OOM-killer SIGKILL / RLIMIT_AS SIGSEGV) — rc<0, empty
+        # streams. The dominant Linux failure. Record the rc, start a cooldown
+        # so we stop retry-storming a build that keeps getting killed, and
+        # skip the stderr categorization (there's nothing in stderr). err_phase
+        # says whether it died creating the venv or installing via pip.
+        if _is_signal_kill(e.returncode):
+            _write_cooldown(state_dir)
+            return BUILD_FAILED, err_phase, f"signal_killed:{e.returncode}"
         # Capture a stderr fingerprint so telemetry can split BUILD_FAILED by
         # root cause (no-network, package-not-found, dns-fail, etc.).
         # Categorize first, then keep a short raw tail for the long tail of
@@ -683,6 +813,12 @@ if __name__ == "__main__":
         exc_errno = _encode_errno(err_kind)
         if exc_errno:
             metrics["sdk_bootstrap_errno"] = exc_errno
+        # Subprocess returncode for signal kills (-9 OOM-killer / -11
+        # RLIMIT_AS / -6 abort). Confirms in prod which signal dominates the
+        # Linux memory-kill bucket. 0 (omitted) for non-signal failures.
+        rc = _encode_rc(err_kind)
+        if rc:
+            metrics["sdk_bootstrap_rc"] = rc
         # venv_ensurepip_fail (code 11) is the top categorizable venv
         # failure, and telemetry shows it's NOT just Debian — macOS has the
         # most distinct affected users. Probe whether this interpreter has
@@ -692,6 +828,14 @@ if __name__ == "__main__":
         # per healthy session.
         if _encode_err_kind(err_kind) == 11:
             metrics["sdk_has_pip"] = _probe_has_pip()
+    # When the hook interpreter is <3.10 (HOOK_PY_INCOMPATIBLE), probe for a
+    # 3.10+ interpreter at known non-PATH locations. Non-zero sdk_alt_py =
+    # this user is RECOVERABLE by an explicit-path search in sg-python.sh; 0 =
+    # genuinely 3.9-only (needs a user install). Sizes the macOS Py-3.9 cohort
+    # (~13.6% of macOS sessions) before we build the search. Incompatible path
+    # only — healthy sessions never run it.
+    if outcome == HOOK_PY_INCOMPATIBLE:
+        metrics["sdk_alt_py"] = _probe_alt_python()
     # Interpreter version (major*100 + minor, e.g. 309 / 312), emitted on
     # every bootstrap. Disambiguates the macOS cohort (Apple 3.9 vs a 3.10+
     # with broken ensurepip) for both venv_ensurepip_fail AND

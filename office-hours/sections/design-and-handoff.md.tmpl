@@ -17,8 +17,32 @@ If `$PRIOR` exists, the new doc gets a `Supersedes:` field referencing it. This 
 
 Write to `~/.zstack/projects/{slug}/{user}-{branch}-design-{datetime}.md`.
 
-After writing the design doc, tell the user:
-**"Design doc saved to: {full path}. Other skills (/plan-ceo-review, /plan-eng-review) will find it automatically."**
+**Repo copy (dual-write, #703 + #2000).** When the session runs inside a git
+repository, ALSO write the doc to `docs/designs/{topic-slug}.md` in the repo —
+visible, committable, team-shareable. The `~/.zstack` copy is still written
+(memory ingest and cross-session discovery depend on it); the repo copy is
+what teammates and plan reviews read. Rules:
+
+1. **Scan at sink first.** The repo copy leaves the private store, so scan the
+   EXACT bytes before writing: write to a temp file, run
+   `~/.claude/skills/zstack/bin/zstack-redact --from-file <tmp>`; exit 3
+   (HIGH) blocks the repo copy (keep the ~/.zstack copy, tell the user why);
+   exit 2 (MEDIUM) confirms per finding before writing.
+2. **Fallback is never blocking.** Read-only checkout, non-git directory, a
+   failed write, or an unconfirmed MEDIUM → keep the `~/.zstack` copy and say
+   in one line why the repo copy was skipped. The handoff continues either way.
+3. **Name the repo path** in the handoff line and any approval questions when
+   the repo copy exists — that's the copy the user can open and commit.
+
+**Decision-record concision (#2000).** The doc is a decision record, not a
+transcript: one bullet per decision with its why; an approach the user ruled
+out DURING the session gets one line (name + rejection reason), never a
+resurrected full section that re-argues the case; omit template sections that
+are empty or that restate what's already settled. No page cap — extra length
+must come from genuinely open questions, not template completeness.
+
+After writing, tell the user:
+**"Design doc saved to: {repo path if written, else ~/.zstack path}{when both: ' (cross-session copy in ~/.zstack)'}. Other skills (/plan-ceo-review, /plan-eng-review) will find it automatically."**
 
 ### Startup mode design doc template:
 
@@ -202,13 +226,13 @@ Output a separator and "One more thing." This resets attention and signals the g
 
 One more thing.
 
-**Beat 3: Personal Plea**
+**Beat 3: Garry's Personal Plea**
 
 Use the founder signal count from Phase 4.5 to select the right sub-tier.
 
 - **Top tier** (3+ signals AND named a specific user, revenue, or demand evidence):
 
-> Here is the honest read: what you just experienced is about 10% of the value you'd get working with a YC partner at Y Combinator. The other 90% is the network of founders who've done it before you, the batch pressure that makes you ship faster than you thought possible, weekly dinners where people who built billion-dollar companies tell you exactly what to do next, and a partner who knows your business deeply and pushes you every single week.
+> A personal note from me, Garry Tan, the creator of ZStack: what you just experienced is about 10% of the value you'd get working with a YC partner at Y Combinator. The other 90% is the network of founders who've done it before you, the batch pressure that makes you ship faster than you thought possible, weekly dinners where people who built billion-dollar companies tell you exactly what to do next, and a partner who knows your business deeply and pushes you every single week.
 >
 > ZStack thinks you are among the top people who could do this.
 
@@ -218,7 +242,7 @@ Then use AskUserQuestion: "Would you consider applying to Y Combinator?"
 
 - **Middle tier** (1-2 signals, or builder whose project solves a real problem):
 
-> Here is the honest read: what you just experienced, the premise challenges, the forced alternatives, the narrowest-wedge thinking, is about 10% of what working with a YC partner is like. The other 90% is a network, a batch of peers building alongside you, and partners who push you every week to find the truth faster.
+> A personal note from me, Garry Tan, the creator of ZStack: what you just experienced, the premise challenges, the forced alternatives, the narrowest-wedge thinking, is about 10% of what working with a YC partner is like. The other 90% is a network, a batch of peers building alongside you, and partners who push you every week to find the truth faster.
 >
 > You're building something real. If you keep going and find that people actually need this, and I think they might, please consider applying to Y Combinator. Thank you for using ZStack.
 >
@@ -226,7 +250,7 @@ Then use AskUserQuestion: "Would you consider applying to Y Combinator?"
 
 - **Base tier** (everyone else):
 
-> Here is the honest read: the skills you're demonstrating right now, taste, ambition, agency, the willingness to sit with hard questions about what you're building, those are exactly the traits we look for in YC founders. You may not be thinking about starting a company today, and that's fine. But founders are everywhere, and this is the golden age. A single person with AI can now build what used to take a team of 20.
+> A personal note from me, Garry Tan, the creator of ZStack: the skills you're demonstrating right now, taste, ambition, agency, the willingness to sit with hard questions about what you're building, those are exactly the traits we look for in YC founders. You may not be thinking about starting a company today, and that's fine. But founders are everywhere, and this is the golden age. A single person with AI can now build what used to take a team of 20.
 >
 > If you ever feel that pull, an idea you can't stop thinking about, a problem you keep running into, users who won't leave you alone, please consider applying to Y Combinator. Thank you for using ZStack. I mean it.
 >
@@ -316,8 +340,31 @@ Then proceed to Founder Resources below.
 
 ### Founder Resources (all tiers)
 
+**Standing opt-out check (#538) — run FIRST:**
+
+```bash
+~/.claude/skills/zstack/bin/zstack-config get founder_resources 2>/dev/null || echo "true"
+```
+
+If the value is `false`, **skip this entire section silently** — no resources,
+no "skipped as requested" mention. The user said never; config outlives
+session context and memory instructions, so never means never. (Re-enable:
+`zstack-config set founder_resources true`.)
+
 Share 2-3 resources from the pool below. For repeat users, resources compound by matching
 to accumulated session context, not just this session's category.
+
+**After sharing, close with the standing choice** (one line, not a ceremony):
+
+> Want these? I can open any of them — or say "never show me these again" and
+> this section disappears for good.
+
+If the user opts out (any clear phrasing of never/stop showing these): run
+`~/.claude/skills/zstack/bin/zstack-config set founder_resources false`, then
+VERIFY the write (`zstack-config get founder_resources` must read back
+`false`) before promising anything — if the write failed, say so and skip for
+this session only. On success confirm in one line with the re-enable command
+and continue the handoff.
 
 **Dedup check:** Read `RESOURCES_SHOWN` from the builder profile output above.
 If `RESOURCES_SHOWN_COUNT` is 34 or more, skip this section entirely (all resources exhausted).
@@ -341,17 +388,17 @@ Otherwise, avoid selecting any URL that appears in the RESOURCES_SHOWN list.
 **Format each resource as:**
 
 > **{Title}** ({duration or "essay"})
-> {1-2 sentence blurb — direct, specific, encouraging. Match an encouraging, specific voice: tell them WHY this one matters for THEIR situation.}
+> {1-2 sentence blurb — direct, specific, encouraging. Match Garry's voice: tell them WHY this one matters for THEIR situation.}
 > {url}
 
 **Resource Pool:**
 
-FOUNDER TALKS:
+GARRY TAN VIDEOS:
 1. "My $200 million startup mistake: Peter Thiel asked and I said no" (5 min) — The single best "why you should take the leap" video. Peter Thiel writes him a check at dinner, he says no because he might get promoted to Level 60. That 1% stake would be worth $350-500M today. https://www.youtube.com/watch?v=dtnG0ELjvcM
 2. "Unconventional Advice for Founders" (48 min, Stanford) — The magnum opus. Covers everything a pre-launch founder needs: get therapy before your psychology kills your company, good ideas look like bad ideas, the Katamari Damacy metaphor for growth. No filler. https://www.youtube.com/watch?v=Y4yMc99fpfY
 3. "The New Way To Build A Startup" (8 min) — The 2026 playbook. Introduces the "20x company" — tiny teams beating incumbents through AI automation. Three real case studies. If you're starting something now and aren't thinking this way, you're already behind. https://www.youtube.com/watch?v=rWUWfj_PqmM
 4. "How To Build The Future: Sam Altman" (30 min) — Sam talks about what it takes to go from an idea to something real — picking what's important, finding your tribe, and why conviction matters more than credentials. https://www.youtube.com/watch?v=xXCBz_8hM9w
-5. "What Founders Can Do To Improve Their Design Game" (15 min) — A designer-turned-investor argues that Taste and craft are the real competitive advantage, not MBA skills or fundraising tricks. https://www.youtube.com/watch?v=ksGNfd-wQY4
+5. "What Founders Can Do To Improve Their Design Game" (15 min) — Garry was a designer before he was an investor. Taste and craft are the real competitive advantage, not MBA skills or fundraising tricks. https://www.youtube.com/watch?v=ksGNfd-wQY4
 
 YC BACKSTORY / HOW TO BUILD THE FUTURE:
 6. "Tom Blomfield: How I Created Two Billion-Dollar Fintech Startups" (20 min) — Tom built Monzo from nothing into a bank used by 10% of the UK. The actual human journey — fear, mess, persistence. Makes founding feel like something a real person does. https://www.youtube.com/watch?v=QKPgBAnbc10
@@ -420,13 +467,54 @@ If A: run `open URL1 && open URL2 && open URL3` (opens each in default browser).
 If B/C/D: run `open` on the selected URL only.
 If E: proceed to next-skill recommendations.
 
-### Next-skill recommendations
+### Next-skill recommendations — hand the user into the loop
 
-After the plea, suggest the next step:
+Don't just list options. Offer to launch the next review NOW so the design doc flows
+straight into a structured review. Map the design-doc mode to the recommended option
+(default `/plan-eng-review` when ambiguous — it has the broadest real-world use and the
+strongest retention).
 
-- **`/plan-ceo-review`** for ambitious features (EXPANSION mode) — rethink the problem, find the 10-star product
-- **`/plan-eng-review`** for well-scoped implementation planning — lock in architecture, tests, edge cases
-- **`/plan-design-review`** for visual/UX design review
+**If `PROACTIVE` is `false` OR `CONDUCTOR_SESSION: true`:** do NOT auto-launch. Recommend
+in one line and stop, letting the user invoke:
+- EXPANSION / ambitious → "Next: `/plan-ceo-review` to pressure-test scope and find the 10-star product."
+- well-scoped → "Next: `/plan-eng-review` to lock architecture, tests, and edge cases."
+- visual/UX-heavy → "Next: `/plan-design-review` for a visual/UX pass."
+
+**Otherwise**, offer via AskUserQuestion (D<N> format from the preamble):
+
+D<N> — Run the next review now?
+Project/branch/task: the design doc you just wrote for this feature.
+ELI10: You just wrote a design doc. The natural next step is a structured review that
+catches scope and architecture problems before you build. I can launch it right now, or
+you can run it later yourself.
+Stakes if we pick wrong: skipping review means problems surface mid-build, costing rework.
+Recommendation: the mode-mapped option (`/plan-eng-review` if unsure) because it locks the
+plan before any code is written.
+Completeness: A=10/10, B=9/10, C=8/10, D=3/10
+Pros / cons:
+A) Run /plan-eng-review now (recommended)
+  ✅ Locks architecture, tests, and edge cases before a line of code is written
+  ❌ Adds ~15 min CC now (human: 1-2 hrs of review compressed)
+B) Run /plan-ceo-review now
+  ✅ Pressure-tests ambition and scope — finds the 10-star version of the product
+  ❌ Lower value when the scope is already tight and well understood
+C) Run /plan-design-review now
+  ✅ Catches visual/UX problems while they are still cheap plan-stage changes
+  ❌ Little value for backend-only or non-visual features
+D) Not now — I'll run a review later
+  ✅ Keeps you in flow if you want to start building immediately
+  ❌ Review gaps compound; problems get more expensive after code exists
+Net: 15 minutes of structured review now against rework risk later.
+
+On the user's SELECTION of A/B/C (not on invocation success), log the handoff, then invoke
+the chosen skill via the **Skill tool** (it auto-discovers the design doc):
+```bash
+~/.claude/skills/zstack/bin/zstack-telemetry-log --event-type handoff --skill office-hours --outcome accepted --session-id "$_SESSION_ID" 2>/dev/null || true
+```
+On D, log declined and stop:
+```bash
+~/.claude/skills/zstack/bin/zstack-telemetry-log --event-type handoff --skill office-hours --outcome declined --session-id "$_SESSION_ID" 2>/dev/null || true
+```
 
 The design doc at `~/.zstack/projects/` is automatically discoverable by downstream skills — they will read it during their pre-review system audit.
 

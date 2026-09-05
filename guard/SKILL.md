@@ -15,17 +15,17 @@ hooks:
     - matcher: "Bash"
       hooks:
         - type: command
-          command: "bash ${CLAUDE_SKILL_DIR}/../careful/bin/check-careful.sh"
+          command: "bash $HOME/.claude/skills/zstack/careful/bin/check-careful.sh"
           statusMessage: "Checking for destructive commands..."
     - matcher: "Edit"
       hooks:
         - type: command
-          command: "bash ${CLAUDE_SKILL_DIR}/../freeze/bin/check-freeze.sh"
+          command: "bash $HOME/.claude/skills/zstack/freeze/bin/check-freeze.sh"
           statusMessage: "Checking freeze boundary..."
     - matcher: "Write"
       hooks:
         - type: command
-          command: "bash ${CLAUDE_SKILL_DIR}/../freeze/bin/check-freeze.sh"
+          command: "bash $HOME/.claude/skills/zstack/freeze/bin/check-freeze.sh"
           statusMessage: "Checking freeze boundary..."
 ---
 <!-- AUTO-GENERATED from SKILL.md.tmpl — do not edit directly -->
@@ -80,7 +80,7 @@ echo "Freeze boundary set: $FREEZE_DIR"
 
 Tell the user:
 - "**Guard mode active.** Two protections are now running:"
-- "1. **Destructive command warnings** — rm -rf, DROP TABLE, force-push, etc. will warn before executing (you can override)"
+- "1. **Destructive command guard** — rm -rf, DROP TABLE, force-push, etc. warn before executing (overridable); catastrophic shapes (recursive delete of / or ~, force-push to the default branch) are hard-denied"
 - "2. **Edit boundary** — file edits restricted to `<path>/`. Edits outside this directory are blocked."
 - "To remove the edit boundary, run `/unfreeze`. To deactivate everything, end the session."
 

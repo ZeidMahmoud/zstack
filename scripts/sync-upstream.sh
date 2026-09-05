@@ -104,9 +104,10 @@ git ls-files -z | { grep -zEv "$PRESERVE_RE" || true; } | xargs -0 -r git rm -q 
 git ls-files -z --others --exclude-standard | { grep -zEv "$PRESERVE_RE" || true; } | xargs -0 -r rm -f --
 find . -mindepth 1 -type d -empty -not -path './.git*' -delete 2>/dev/null || true
 cp -a "$STAGE"/. .
-# -f: upstream's own .gitignore (bin/gstack-global-discover*) would otherwise
-# hide the renamed bin/zstack-global-discover.ts, which setup needs.
-git add -Af .
+git add -A .
+# upstream's own .gitignore (bin/gstack-global-discover*) would otherwise hide
+# the renamed bin/zstack-global-discover.ts, which setup needs.
+git add -f bin/zstack-global-discover.ts 2>/dev/null || true
 echo "replaced tree ($(git diff --cached --stat | tail -1))"
 
 # ─── 3. overlay ──────────────────────────────────────────────────

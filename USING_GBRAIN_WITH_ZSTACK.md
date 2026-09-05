@@ -2,7 +2,7 @@
 
 Your coding agent, with a memory it actually keeps.
 
-[GBrain](https://github.com/zeid/gbrain) is a persistent knowledge base designed for AI agents. It stores what your agent learns, what you've decided, what worked and what didn't, and lets the agent search all of it on demand. ZStack gives you a one-command path from zero to "gbrain is running, and my agent can call it" — with paths for try-it-local, share-with-your-team, and everything between.
+[GBrain](https://github.com/garrytan/gbrain) is a persistent knowledge base designed for AI agents. It stores what your agent learns, what you've decided, what worked and what didn't, and lets the agent search all of it on demand. ZStack gives you a one-command path from zero to "gbrain is running, and my agent can call it" — with paths for try-it-local, share-with-your-team, and everything between.
 
 This is the full monty: every scenario, every flag, every helper bin, every troubleshooting step. For the quick pitch, see the [README's GBrain section](README.md#gbrain--persistent-knowledge-for-your-coding-agent). For error codes and sync-specific issues, see [docs/gbrain-sync.md](docs/gbrain-sync.md).
 
@@ -132,6 +132,8 @@ Storage: `~/.zstack/gbrain-repo-policy.json`, mode 0600, schema-versioned so fut
 
 The skill runs three stages — code, memory, brain-sync — independently. A failure in one doesn't block the others. State persists to `~/.zstack/.gbrain-sync-state.json` so re-running picks up cleanly.
 
+Stages that can send data off-machine (code sync into a possibly-remote gbrain DB, memory ingest, the brain-sync push) each write a tamper-evident receipt to the egress ledger (`~/.zstack/security/egress.jsonl`) before sending, fail-closed: if the receipt can't be written, the stage refuses with `EGRESS_RECEIPT_FAILED` instead of syncing unrecorded. Fix is usually `mkdir -p ~/.zstack/security && chmod -R u+w ~/.zstack/security`, then re-run. Inspect receipts with `zstack-egress list`.
+
 **What it does on a fresh worktree:**
 
 1. **Pre-flight.** Checks `gbrain_local_status` (the local engine's health). If the engine is `broken-db` or `broken-config`, the skill STOPs with a remediation menu — it refuses to silently degrade. If the local engine is missing and you're in remote-MCP mode (Path 4), the code stage SKIPs cleanly and only brain-sync runs.
@@ -167,14 +169,16 @@ This is different from gbrain itself. Your zstack state (`~/.zstack/` — learni
 Turn it on with:
 
 ```bash
-zstack-brain-init
+zstack-artifacts-init
 ```
 
 You'll get a one-time privacy prompt: **everything allowlisted** / **artifacts only** (plans, designs, retros, learnings — skip behavioral data like timelines) / **off**. Every skill run syncs the queue at start and end — no daemon, no background process.
 
 Secret-shaped content (AWS keys, GitHub tokens, PEM blocks, JWTs, bearer tokens) is blocked from sync before it leaves your machine.
 
-**On a new machine:** Copy `~/.zstack-brain-remote.txt` over, run `zstack-brain-restore`, and yesterday's learnings surface on today's laptop.
+**On a new machine:** Copy `~/.zstack-artifacts-remote.txt` over (the legacy
+`~/.zstack-brain-remote.txt` name still works), run `zstack-brain-restore`, and
+yesterday's learnings surface on today's laptop.
 
 Full guide: [docs/gbrain-sync.md](docs/gbrain-sync.md). Error index: [docs/gbrain-sync-errors.md](docs/gbrain-sync-errors.md).
 
@@ -237,9 +241,9 @@ Gbrain itself ships with these that zstack wraps:
 | `~/.gbrain/config.json` | Engine (pglite/postgres), database URL or path, API keys. Mode 0600. Written by `gbrain init`. |
 | `~/.zstack/gbrain-repo-policy.json` | Per-remote trust triad. Schema v2. Mode 0600. |
 | `~/.zstack/.setup-gbrain.lock.d` | Concurrent-run lock (atomic mkdir). Released on normal exit + SIGINT. |
-| `~/.zstack/.brain-queue.jsonl` | Pending sync entries for zstack memory sync |
+| `~/.zstack/.brain-queue.d/` | Pending sync records for zstack memory sync — maildir-style spool, one file per record. A legacy `.brain-queue.jsonl` from older releases migrates automatically on the next drain. |
 | `~/.zstack/.brain-last-push` | Timestamp of last sync push (for `/health` scoring) |
-| `~/.zstack-brain-remote.txt` | URL of your zstack memory sync remote (safe to copy between machines) |
+| `~/.zstack-artifacts-remote.txt` | URL of your zstack memory sync remote (safe to copy between machines; legacy name `~/.zstack-brain-remote.txt` still read) |
 | `~/.zstack/.setup-gbrain-inflight.json` | Reserved for future `--resume-provision` persisted state |
 
 ### Environment variables
@@ -359,6 +363,10 @@ gbrain sync --source <source-id> --skip-failed
 ```
 
 Watermark advances past the offending commit. The same file fails again if it changes; re-skip when that happens.
+
+### ZeroEntropy embeddings stop working after September 4, 2026
+
+ZeroEntropy was acquired by Notion and sunsets its hosted API on **September 4, 2026** (new signups already disabled). A gbrain configured with the `zeroentropyai` embedding recipe keeps importing pages after that date, but embedding silently fails — pages land structurally with no semantic search. The wireup helper warns when your `~/.gbrain/config.json` names the recipe; migrate to another provider (Voyage via `VOYAGE_API_KEY`, or OpenAI via `OPENAI_API_KEY`) before the deadline. Details, self-hosting caveats, and migration discussion: [ZeidMahmoud/zstack#2365](https://github.com/ZeidMahmoud/zstack/issues/2365).
 
 ### Switching PGLite → Supabase hangs
 

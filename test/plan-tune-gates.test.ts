@@ -55,7 +55,7 @@ function runBin(
   }
   env.ZSTACK_STATE_ROOT = stateRoot;
   delete env.ZSTACK_HOME;
-  const res = spawnSync(bin, args, { env, encoding: 'utf-8', cwd: ROOT });
+  const res = spawnSync(bin, args, { env, encoding: 'utf-8', cwd: ROOT, timeout: 30_000 });
   return {
     stdout: res.stdout ?? '',
     stderr: res.stderr ?? '',

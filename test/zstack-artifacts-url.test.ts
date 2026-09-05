@@ -13,7 +13,7 @@ const ROOT = path.resolve(import.meta.dir, '..');
 const URL_BIN = path.join(ROOT, 'bin', 'zstack-artifacts-url');
 
 function run(args: string[]): { code: number; stdout: string; stderr: string } {
-  const r = spawnSync(URL_BIN, args, { encoding: 'utf-8' });
+  const r = spawnSync(URL_BIN, args, { encoding: 'utf-8', timeout: 30_000 });
   return {
     code: r.status ?? -1,
     stdout: (r.stdout || '').trim(),
@@ -23,24 +23,24 @@ function run(args: string[]): { code: number; stdout: string; stderr: string } {
 
 describe('zstack-artifacts-url', () => {
   test('--to ssh from canonical https', () => {
-    const r = run(['--to', 'ssh', 'https://github.com/zeid/zstack-artifacts-zeid']);
+    const r = run(['--to', 'ssh', 'https://github.com/ZeidMahmoud/zstack-artifacts-garrytan']);
     expect(r.code).toBe(0);
-    expect(r.stdout).toBe('git@github.com:zeid/zstack-artifacts-zeid.git');
+    expect(r.stdout).toBe('git@github.com:ZeidMahmoud/zstack-artifacts-garrytan.git');
   });
 
   test('--to ssh from https-with-.git', () => {
-    const r = run(['--to', 'ssh', 'https://github.com/zeid/zstack-artifacts-zeid.git']);
-    expect(r.stdout).toBe('git@github.com:zeid/zstack-artifacts-zeid.git');
+    const r = run(['--to', 'ssh', 'https://github.com/ZeidMahmoud/zstack-artifacts-garrytan.git']);
+    expect(r.stdout).toBe('git@github.com:ZeidMahmoud/zstack-artifacts-garrytan.git');
   });
 
   test('--to https is idempotent on https input', () => {
-    const r = run(['--to', 'https', 'https://github.com/zeid/zstack-artifacts-zeid']);
-    expect(r.stdout).toBe('https://github.com/zeid/zstack-artifacts-zeid');
+    const r = run(['--to', 'https', 'https://github.com/ZeidMahmoud/zstack-artifacts-garrytan']);
+    expect(r.stdout).toBe('https://github.com/ZeidMahmoud/zstack-artifacts-garrytan');
   });
 
   test('--to https from git@host:owner/repo.git', () => {
-    const r = run(['--to', 'https', 'git@github.com:zeid/zstack-artifacts-zeid.git']);
-    expect(r.stdout).toBe('https://github.com/zeid/zstack-artifacts-zeid');
+    const r = run(['--to', 'https', 'git@github.com:ZeidMahmoud/zstack-artifacts-garrytan.git']);
+    expect(r.stdout).toBe('https://github.com/ZeidMahmoud/zstack-artifacts-garrytan');
   });
 
   test('--to https from ssh:// scheme (gitlab self-hosted style)', () => {
@@ -55,8 +55,8 @@ describe('zstack-artifacts-url', () => {
   });
 
   test('--owner-repo extracts the path segment', () => {
-    expect(run(['--owner-repo', 'https://github.com/zeid/zstack-artifacts-zeid']).stdout)
-      .toBe('zeid/zstack-artifacts-zeid');
+    expect(run(['--owner-repo', 'https://github.com/ZeidMahmoud/zstack-artifacts-garrytan']).stdout)
+      .toBe('ZeidMahmoud/zstack-artifacts-garrytan');
     expect(run(['--owner-repo', 'git@github.com:team/zstack-artifacts-team.git']).stdout)
       .toBe('team/zstack-artifacts-team');
   });
@@ -97,7 +97,7 @@ describe('zstack-artifacts-url', () => {
   });
 
   test('round-trip: https → ssh → https is identity', () => {
-    const original = 'https://github.com/zeid/zstack-artifacts-zeid';
+    const original = 'https://github.com/ZeidMahmoud/zstack-artifacts-garrytan';
     const ssh = run(['--to', 'ssh', original]).stdout;
     const back = run(['--to', 'https', ssh]).stdout;
     expect(back).toBe(original);

@@ -66,6 +66,7 @@ function runDetect(extraEnv: Record<string, string> = {}): { code: number; json:
       ...extraEnv,
     },
     encoding: 'utf-8',
+    timeout: 30_000,
   });
   let json: any = null;
   try {
@@ -208,6 +209,61 @@ describe('gbrain_mcp_mode — Tier 3: ~/.claude.json jq read', () => {
     );
     expect(runDetect().json.gbrain_mcp_mode).toBe('none');
   });
+
+  // #2051 name generalization: a gbrain server registered under a variant
+  // name still counts. Identification order: url-match against the config's
+  // remote_mcp.mcp_url (deterministic — gbrain mounts at generic /mcp so
+  // URL-path heuristics are impossible) → name pattern gbrain[-_]* → stdio
+  // command token.
+  test('server named gbrain-remote (name pattern) → remote-http', () => {
+    fs.writeFileSync(
+      path.join(tmpHome, '.claude.json'),
+      JSON.stringify({
+        mcpServers: { 'gbrain-remote': { type: 'url', url: 'https://brain.corp.example/mcp' } },
+      })
+    );
+    expect(runDetect().json.gbrain_mcp_mode).toBe('remote-http');
+  });
+
+  test('arbitrarily-named server whose url matches config remote_mcp.mcp_url → remote-http', () => {
+    fs.mkdirSync(path.join(tmpHome, '.gbrain'), { recursive: true });
+    fs.writeFileSync(
+      path.join(tmpHome, '.gbrain', 'config.json'),
+      JSON.stringify({ remote_mcp: { mcp_url: 'https://team-brain.example.com/mcp' } })
+    );
+    fs.writeFileSync(
+      path.join(tmpHome, '.claude.json'),
+      JSON.stringify({
+        mcpServers: { 'our-team-brain': { type: 'url', url: 'https://team-brain.example.com/mcp' } },
+      })
+    );
+    expect(runDetect().json.gbrain_mcp_mode).toBe('remote-http');
+  });
+
+  test('unrelated server with a non-matching url does NOT false-positive → none', () => {
+    fs.mkdirSync(path.join(tmpHome, '.gbrain'), { recursive: true });
+    fs.writeFileSync(
+      path.join(tmpHome, '.gbrain', 'config.json'),
+      JSON.stringify({ remote_mcp: { mcp_url: 'https://team-brain.example.com/mcp' } })
+    );
+    fs.writeFileSync(
+      path.join(tmpHome, '.claude.json'),
+      JSON.stringify({
+        mcpServers: { linear: { type: 'url', url: 'https://mcp.linear.app/mcp' } },
+      })
+    );
+    expect(runDetect().json.gbrain_mcp_mode).toBe('none');
+  });
+
+  test('stdio server with gbrain in the command token → local-stdio', () => {
+    fs.writeFileSync(
+      path.join(tmpHome, '.claude.json'),
+      JSON.stringify({
+        mcpServers: { 'my-brain': { type: 'stdio', command: '/usr/local/bin/gbrain' } },
+      })
+    );
+    expect(runDetect().json.gbrain_mcp_mode).toBe('local-stdio');
+  });
 });
 
 describe('gbrain_mcp_mode — no info anywhere', () => {
@@ -221,20 +277,20 @@ describe('zstack_artifacts_remote', () => {
   test('reads ~/.zstack-artifacts-remote.txt when present', () => {
     fs.writeFileSync(
       path.join(tmpHome, '.zstack-artifacts-remote.txt'),
-      'https://github.com/zeid/zstack-artifacts-zeid\n'
+      'https://github.com/ZeidMahmoud/zstack-artifacts-garrytan\n'
     );
     expect(runDetect().json.zstack_artifacts_remote).toBe(
-      'https://github.com/zeid/zstack-artifacts-zeid'
+      'https://github.com/ZeidMahmoud/zstack-artifacts-garrytan'
     );
   });
 
   test('migration-window fallback: reads ~/.zstack-brain-remote.txt if artifacts file is missing', () => {
     fs.writeFileSync(
       path.join(tmpHome, '.zstack-brain-remote.txt'),
-      'git@github.com:zeid/zstack-brain-zeid.git\n'
+      'git@github.com:ZeidMahmoud/zstack-brain-garrytan.git\n'
     );
     expect(runDetect().json.zstack_artifacts_remote).toBe(
-      'git@github.com:zeid/zstack-brain-zeid.git'
+      'git@github.com:ZeidMahmoud/zstack-brain-garrytan.git'
     );
   });
 

@@ -1,9 +1,9 @@
 # ZStack Browser V0 — The AI-Native Development Browser
 
 **Date:** 2026-03-30
-**Author:** the author + Claude Code
+**Author:** Garry Tan + Claude Code
 **Status:** Phase 1a shipped, Phase 1b in progress
-**Branch:** zeid/zstack-as-browser
+**Branch:** ZeidMahmoud/zstack-as-browser
 
 ## The Thesis
 

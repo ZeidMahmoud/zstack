@@ -23,15 +23,16 @@
  * Periodic tier.
  */
 
-import { describe, test, expect } from 'bun:test';
+import { test, expect } from 'bun:test';
+import { CAPTURE_LONG_MS } from './helpers/eval-budgets';
+import { describeE2ETier } from './helpers/e2e-gate';
 import {
   setupSkillDir,
   skillFromWorktree,
   captureSectionReads,
 } from './helpers/auq-sdk-capture';
 
-const shouldRun = !!process.env.EVALS && process.env.EVALS_TIER === 'periodic';
-const describeE2E = shouldRun ? describe : describe.skip;
+const describeE2E = describeE2ETier('periodic');
 const runId = `ship-section-loading-${process.env.EVALS_RUN_ID ?? 'local'}`;
 
 // Sections every version-changing ship must consult.
@@ -65,7 +66,7 @@ describeE2E('/ship section-loading E2E (periodic, SDK capture)', () => {
           'This is a FRESH version-changing ship: the branch has a real code change (app.js gained a new function with a test), VERSION still equals the base version (0.0.1, so it needs a bump), and CHANGELOG.md needs a new entry. Follow the skill\'s flow for a version-changing ship: run the pre-landing review and prepare the CHANGELOG entry. Produce the ship plan / review report. Do NOT actually commit, push, or open a PR.',
         requiredSections: REQUIRED_SECTIONS,
         reportMarker: /version|changelog|review|ship/i,
-        testName: '/ship section-loading',
+        testName: 'ship-section-loading',
         runId,
       });
 
@@ -78,6 +79,6 @@ describeE2E('/ship section-loading E2E (periodic, SDK capture)', () => {
       // Guard against an empty pass: the report must have real content.
       expect(output.trim().length).toBeGreaterThan(200);
     },
-    360_000,
+    CAPTURE_LONG_MS,
   );
 });

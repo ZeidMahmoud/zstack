@@ -8,7 +8,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from "bun:test";
-import { mkdtempSync, writeFileSync, readFileSync, existsSync, rmSync, mkdirSync, chmodSync } from "fs";
+import { mkdtempSync, writeFileSync, readFileSync, existsSync, rmSync, mkdirSync, chmodSync, symlinkSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
 import { spawnSync } from "child_process";
@@ -62,6 +62,14 @@ describe("zstack-gbrain-sync CLI", () => {
     expect(source).toContain("localEngineStatus");
   });
 
+  it("uses GBrain's config environment when resolving dream sources", () => {
+    const source = readFileSync(SCRIPT, "utf-8");
+
+    expect(source).not.toContain("resolveCodeSourceId(root, process.env)");
+    expect(source).toContain("resolveCodeSourceId(root, gbrainEnv)");
+    expect(source).toContain("cycleCompleted(resolveCodeSourceId(root, gbrainEnv), gbrainEnv)");
+  });
+
   it("--dry-run with --code-only reports the code import preview only", () => {
     const home = makeTestHome();
     const zstackHome = join(home, ".zstack");
@@ -108,7 +116,7 @@ describe("zstack-gbrain-sync CLI", () => {
 
   it("dry-run derives a stable source id from the canonical git remote", () => {
     // The source id pattern is `zstack-code-<canonicalized-remote>`. For this
-    // repo (github.com/zeid/zstack), the slug should appear in the dry-run
+    // repo (github.com/ZeidMahmoud/zstack), the slug should appear in the dry-run
     // preview line. We don't pin the exact slug — just verify the prefix +
     // that the preview command would target a source with id zstack-code-*.
     const home = makeTestHome();
@@ -122,6 +130,149 @@ describe("zstack-gbrain-sync CLI", () => {
     rmSync(home, { recursive: true, force: true });
   });
 
+  it("uses a local .gbrain-source in dry-run without spawning gbrain", () => {
+    const home = makeTestHome();
+    const zstackHome = join(home, ".zstack");
+    const bindir = mkdtempSync(join(tmpdir(), "zstack-pinned-source-bin-"));
+    const repo = mkdtempSync(join(tmpdir(), "zstack-pinned-source-repo-"));
+    const commandLog = join(home, "gbrain-commands.log");
+    mkdirSync(zstackHome, { recursive: true });
+    spawnSync("git", ["init", "--quiet", "-b", "main"], { cwd: repo, timeout: 30_000 });
+    writeFileSync(join(repo, ".gbrain-source"), "client-acme-app\n");
+    writeFileSync(join(bindir, "gbrain"), `#!/bin/sh
+printf '%s\\n' "$*" >> "$ZSTACK_TEST_GBRAIN_LOG"
+exit 99
+`);
+    chmodSync(join(bindir, "gbrain"), 0o755);
+
+    const r = spawnSync("bun", [SCRIPT, "--dry-run", "--code-only", "--quiet"], {
+      encoding: "utf-8",
+      timeout: 60000,
+      cwd: repo,
+      env: {
+        ...process.env,
+        HOME: home,
+        ZSTACK_HOME: zstackHome,
+        ZSTACK_TEST_GBRAIN_LOG: commandLog,
+        PATH: `${bindir}:${process.env.PATH || ""}`,
+      },
+    });
+
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain("gbrain sync --strategy code --source client-acme-app");
+    expect(r.stdout).not.toContain("gbrain sources add");
+    expect(r.stdout).not.toContain("--federated");
+    expect(existsSync(commandLog)).toBe(false);
+    rmSync(repo, { recursive: true, force: true });
+    rmSync(bindir, { recursive: true, force: true });
+    rmSync(home, { recursive: true, force: true });
+  });
+
+  it("keeps a symlink-equivalent pinned source registered as-is", () => {
+    const home = makeTestHome();
+    const zstackHome = join(home, ".zstack");
+    const repo = mkdtempSync(join(tmpdir(), "zstack-pinned-source-repo-"));
+    const linkDir = mkdtempSync(join(tmpdir(), "zstack-pinned-source-link-"));
+    const link = join(linkDir, "repo");
+    const bindir = mkdtempSync(join(tmpdir(), "zstack-pinned-source-bin-"));
+    const commandLog = join(home, "gbrain-commands.log");
+    mkdirSync(zstackHome, { recursive: true });
+    mkdirSync(join(home, ".gbrain"), { recursive: true });
+    writeFileSync(join(home, ".gbrain", "config.json"), JSON.stringify({ engine: "pglite", database_url: "pglite:///test" }));
+    spawnSync("git", ["init", "--quiet", "-b", "main"], { cwd: repo, timeout: 30_000 });
+    writeFileSync(join(repo, ".gbrain-source"), "client-acme-app\n");
+    symlinkSync(repo, link, "dir");
+    writeFileSync(join(bindir, "gbrain"), `#!/bin/sh
+printf '%s\\n' "$*" >> "$ZSTACK_TEST_GBRAIN_LOG"
+case "$*" in
+  --version) echo 'gbrain 0.42.0.0' ;;
+  "sources list --json") echo '{"sources":[{"id":"client-acme-app","local_path":"${link}","page_count":1}]}' ;;
+  "sync --strategy code --source client-acme-app"|"sources attach client-acme-app") ;;
+  *) echo "unexpected gbrain command: $*" >&2; exit 1 ;;
+esac
+`);
+    chmodSync(join(bindir, "gbrain"), 0o755);
+    // #2685: this case is a real (non-dry-run) --code-only child, so it hits
+    // detectAutopilot's PATH-resolved `pgrep -f "gbrain autopilot"`. A live
+    // host autopilot is a correct #1734 refuse — the test cannot inject
+    // processRunning. Stub pgrep to "no match" so the pin is about the
+    // symlink, not the operator's daemon. Blank GBRAIN_HOME so an inherited
+    // lock under $GBRAIN_HOME/.gbrain cannot refuse before pgrep. Do not add
+    // a production env hatch.
+    writeFileSync(join(bindir, "pgrep"), "#!/bin/sh\nexit 1\n");
+    chmodSync(join(bindir, "pgrep"), 0o755);
+
+    const r = spawnSync("bun", [SCRIPT, "--code-only", "--quiet"], {
+      encoding: "utf-8",
+      timeout: 60000,
+      cwd: link,
+      env: {
+        ...process.env,
+        HOME: home,
+        ZSTACK_HOME: zstackHome,
+        GBRAIN_HOME: "",
+        ZSTACK_TEST_GBRAIN_LOG: commandLog,
+        PATH: `${bindir}:${process.env.PATH || ""}`,
+      },
+    });
+
+    const commands = readFileSync(commandLog, "utf-8");
+    expect(r.status).toBe(0);
+    expect(commands).toContain("sync --strategy code --source client-acme-app");
+    expect(commands).toContain("sources attach client-acme-app");
+    expect(commands).not.toMatch(/^sources (add|remove) /m);
+    rmSync(repo, { recursive: true, force: true });
+    rmSync(linkDir, { recursive: true, force: true });
+    rmSync(bindir, { recursive: true, force: true });
+    rmSync(home, { recursive: true, force: true });
+  });
+
+  it("uses a local pin for a dry-run dream without spawning gbrain", () => {
+    const home = makeTestHome();
+    const zstackHome = join(home, ".zstack");
+    const bindir = mkdtempSync(join(tmpdir(), "zstack-pinned-dream-bin-"));
+    const repo = mkdtempSync(join(tmpdir(), "zstack-pinned-dream-repo-"));
+    mkdirSync(zstackHome, { recursive: true });
+    spawnSync("git", ["init", "--quiet", "-b", "main"], { cwd: repo, timeout: 30_000 });
+    writeFileSync(join(repo, ".gbrain-source"), "client-acme-app\n");
+    writeFileSync(join(bindir, "gbrain"), "#!/bin/sh\nexit 99\n");
+    chmodSync(join(bindir, "gbrain"), 0o755);
+
+    const r = spawnSync("bun", [SCRIPT, "--dry-run", "--dream", "--no-code", "--no-memory", "--no-brain-sync", "--quiet"], {
+      encoding: "utf-8",
+      timeout: 60000,
+      cwd: repo,
+      env: { ...process.env, HOME: home, ZSTACK_HOME: zstackHome, PATH: `${bindir}:${process.env.PATH || ""}` },
+    });
+
+    expect(r.status).toBe(0);
+    expect(r.stdout).toContain("gbrain dream --source client-acme-app");
+    rmSync(repo, { recursive: true, force: true });
+    rmSync(bindir, { recursive: true, force: true });
+    rmSync(home, { recursive: true, force: true });
+  });
+
+  it("falls back to a derived source when .gbrain-source cannot be read", () => {
+    const home = makeTestHome();
+    const zstackHome = join(home, ".zstack");
+    const repo = mkdtempSync(join(tmpdir(), "zstack-unreadable-pin-repo-"));
+    mkdirSync(zstackHome, { recursive: true });
+    spawnSync("git", ["init", "--quiet", "-b", "main"], { cwd: repo, timeout: 30_000 });
+    mkdirSync(join(repo, ".gbrain-source"));
+
+    const r = spawnSync("bun", [SCRIPT, "--dry-run", "--code-only", "--quiet"], {
+      encoding: "utf-8",
+      timeout: 60000,
+      cwd: repo,
+      env: { ...process.env, HOME: home, ZSTACK_HOME: zstackHome },
+    });
+
+    expect(r.status).toBe(0);
+    expect(r.stdout).toMatch(/gbrain sources add zstack-code-/);
+    rmSync(repo, { recursive: true, force: true });
+    rmSync(home, { recursive: true, force: true });
+  });
+
   it("derived source ids are gbrain-valid (≤32 chars, alnum + interior hyphens, no dots) for any remote", () => {
     // gbrain enforces source ids to be 1-32 lowercase alnum chars with optional interior
     // hyphens. Pre-fix, the slug came from canonicalizeRemote() with only `/` and
@@ -131,7 +282,7 @@ describe("zstack-gbrain-sync CLI", () => {
     // controlled remotes by spawning the CLI in a temp git repo.
     const cases = [
       "https://github.com/radubach/platform.git",      // dot in hostname, total > 32 with old slug
-      "git@github.com:zeid/zstack.git",            // SCP-style remote
+      "git@github.com:ZeidMahmoud/zstack.git",            // SCP-style remote
       "https://gitlab.example.com/team/proj.git",      // multi-dot host, non-github
       "https://github.com/some-very-long-org-name/some-very-long-repo-name.git", // forces hash-truncate
     ];
@@ -141,8 +292,8 @@ describe("zstack-gbrain-sync CLI", () => {
       const zstackHome = join(home, ".zstack");
       mkdirSync(zstackHome, { recursive: true });
       const repo = mkdtempSync(join(tmpdir(), "zstack-source-id-repo-"));
-      spawnSync("git", ["init", "--quiet", "-b", "main"], { cwd: repo });
-      spawnSync("git", ["remote", "add", "origin", remote], { cwd: repo });
+      spawnSync("git", ["init", "--quiet", "-b", "main"], { cwd: repo, timeout: 30_000 });
+      spawnSync("git", ["remote", "add", "origin", remote], { cwd: repo, timeout: 30_000 });
 
       const r = spawnSync("bun", [SCRIPT, "--dry-run", "--code-only", "--quiet"], {
         encoding: "utf-8",
@@ -171,7 +322,7 @@ describe("zstack-gbrain-sync CLI", () => {
     const zstackHome = join(home, ".zstack");
     mkdirSync(zstackHome, { recursive: true });
     const repo = mkdtempSync(join(tmpdir(), "zstack-no-origin-"));
-    spawnSync("git", ["init", "--quiet", "-b", "main"], { cwd: repo });
+    spawnSync("git", ["init", "--quiet", "-b", "main"], { cwd: repo, timeout: 30_000 });
     // No `git remote add origin` — this is the no-remote case.
 
     const r = spawnSync("bun", [SCRIPT, "--dry-run", "--code-only", "--quiet"], {
@@ -206,7 +357,7 @@ describe("zstack-gbrain-sync CLI", () => {
     const parent = mkdtempSync(join(tmpdir(), "zstack-empty-base-"));
     const repo = join(parent, "___");
     mkdirSync(repo);
-    spawnSync("git", ["init", "--quiet", "-b", "main"], { cwd: repo });
+    spawnSync("git", ["init", "--quiet", "-b", "main"], { cwd: repo, timeout: 30_000 });
     // No `origin` remote — forces the basename-fallback path.
 
     const r = spawnSync("bun", [SCRIPT, "--dry-run", "--code-only", "--quiet"], {
@@ -240,8 +391,8 @@ describe("zstack-gbrain-sync CLI", () => {
     const zstackHome = join(home, ".zstack");
     mkdirSync(zstackHome, { recursive: true });
     const repo = mkdtempSync(join(tmpdir(), "zstack-host-collide-"));
-    spawnSync("git", ["init", "--quiet", "-b", "main"], { cwd: repo });
-    spawnSync("git", ["remote", "add", "origin", "https://github.com/example/multihost.git"], { cwd: repo });
+    spawnSync("git", ["init", "--quiet", "-b", "main"], { cwd: repo, timeout: 30_000 });
+    spawnSync("git", ["remote", "add", "origin", "https://github.com/example/multihost.git"], { cwd: repo, timeout: 30_000 });
 
     // Dry-run still gates the code stage on `command -v gbrain`. Drop a no-op
     // shim on PATH so the stage runs (we only assert the preview line, never
@@ -420,7 +571,7 @@ describe("zstack-gbrain-sync CLI", () => {
     // ID was slug-only so both worktrees collapsed onto `zstack-code-<slug>` and
     // last-sync-wins corrupted whichever the user wasn't actively syncing. The
     // pathhash8 suffix makes each worktree's source independent.
-    const remote = "https://github.com/zeid/zstack.git";
+    const remote = "https://github.com/ZeidMahmoud/zstack.git";
     const home = makeTestHome();
     const zstackHome = join(home, ".zstack");
     mkdirSync(zstackHome, { recursive: true });
@@ -428,8 +579,8 @@ describe("zstack-gbrain-sync CLI", () => {
     const repoA = mkdtempSync(join(tmpdir(), "zstack-worktree-a-"));
     const repoB = mkdtempSync(join(tmpdir(), "zstack-worktree-b-"));
     for (const repo of [repoA, repoB]) {
-      spawnSync("git", ["init", "--quiet", "-b", "main"], { cwd: repo });
-      spawnSync("git", ["remote", "add", "origin", remote], { cwd: repo });
+      spawnSync("git", ["init", "--quiet", "-b", "main"], { cwd: repo, timeout: 30_000 });
+      spawnSync("git", ["remote", "add", "origin", remote], { cwd: repo, timeout: 30_000 });
     }
 
     const idOf = (cwd: string): string => {
@@ -460,13 +611,13 @@ describe("zstack-gbrain-sync CLI", () => {
     // The pathhash is derived from the absolute repo path via sha1, so
     // /sync-gbrain run twice in the same worktree must converge on the same
     // source id (idempotent registration depends on this).
-    const remote = "https://github.com/zeid/zstack.git";
+    const remote = "https://github.com/ZeidMahmoud/zstack.git";
     const home = makeTestHome();
     const zstackHome = join(home, ".zstack");
     mkdirSync(zstackHome, { recursive: true });
     const repo = mkdtempSync(join(tmpdir(), "zstack-worktree-stable-"));
-    spawnSync("git", ["init", "--quiet", "-b", "main"], { cwd: repo });
-    spawnSync("git", ["remote", "add", "origin", remote], { cwd: repo });
+    spawnSync("git", ["init", "--quiet", "-b", "main"], { cwd: repo, timeout: 30_000 });
+    spawnSync("git", ["remote", "add", "origin", remote], { cwd: repo, timeout: 30_000 });
 
     const idOf = (): string => {
       const r = spawnSync("bun", [SCRIPT, "--dry-run", "--code-only", "--quiet"], {
@@ -494,8 +645,8 @@ describe("zstack-gbrain-sync CLI", () => {
     const zstackHome = join(home, ".zstack");
     mkdirSync(zstackHome, { recursive: true });
     const repo = mkdtempSync(join(tmpdir(), "zstack-legacy-cleanup-"));
-    spawnSync("git", ["init", "--quiet", "-b", "main"], { cwd: repo });
-    spawnSync("git", ["remote", "add", "origin", "https://github.com/zeid/zstack.git"], { cwd: repo });
+    spawnSync("git", ["init", "--quiet", "-b", "main"], { cwd: repo, timeout: 30_000 });
+    spawnSync("git", ["remote", "add", "origin", "https://github.com/ZeidMahmoud/zstack.git"], { cwd: repo, timeout: 30_000 });
 
     const r = spawnSync("bun", [SCRIPT, "--dry-run", "--code-only", "--quiet"], {
       encoding: "utf-8",
@@ -530,8 +681,8 @@ describe("zstack-gbrain-sync CLI", () => {
     const zstackHome = join(home, ".zstack");
     mkdirSync(zstackHome, { recursive: true });
     const repo = mkdtempSync(join(tmpdir(), "zstack-attach-preview-"));
-    spawnSync("git", ["init", "--quiet", "-b", "main"], { cwd: repo });
-    spawnSync("git", ["remote", "add", "origin", "https://github.com/zeid/zstack.git"], { cwd: repo });
+    spawnSync("git", ["init", "--quiet", "-b", "main"], { cwd: repo, timeout: 30_000 });
+    spawnSync("git", ["remote", "add", "origin", "https://github.com/ZeidMahmoud/zstack.git"], { cwd: repo, timeout: 30_000 });
 
     const r = spawnSync("bun", [SCRIPT, "--dry-run", "--code-only", "--quiet"], {
       encoding: "utf-8",
@@ -586,8 +737,8 @@ describe("derivePathOnlyHashLegacyId", () => {
     // legacy id regardless of $ZSTACK_HOSTNAME, because the pre-#1468 hash
     // didn't include hostname.
     const repo = mkdtempSync(join(tmpdir(), "zstack-legacy-id-"));
-    spawnSync("git", ["init", "--quiet", "-b", "main"], { cwd: repo });
-    spawnSync("git", ["remote", "add", "origin", "https://github.com/example/legacy-test.git"], { cwd: repo });
+    spawnSync("git", ["init", "--quiet", "-b", "main"], { cwd: repo, timeout: 30_000 });
+    spawnSync("git", ["remote", "add", "origin", "https://github.com/example/legacy-test.git"], { cwd: repo, timeout: 30_000 });
 
     const cwd = process.cwd();
     try {
@@ -613,8 +764,8 @@ describe("derivePathOnlyHashLegacyId", () => {
     // host-fold id must differ for any non-empty hostname, so the migration
     // can detect + clean up the orphan.
     const repo = mkdtempSync(join(tmpdir(), "zstack-legacy-id-distinct-"));
-    spawnSync("git", ["init", "--quiet", "-b", "main"], { cwd: repo });
-    spawnSync("git", ["remote", "add", "origin", "https://github.com/example/distinct.git"], { cwd: repo });
+    spawnSync("git", ["init", "--quiet", "-b", "main"], { cwd: repo, timeout: 30_000 });
+    spawnSync("git", ["remote", "add", "origin", "https://github.com/example/distinct.git"], { cwd: repo, timeout: 30_000 });
 
     const cwd = process.cwd();
     try {
@@ -749,10 +900,10 @@ describe("constrainSourceId truncation (hyphen-boundary cut)", () => {
     const zstackHome = join(home, ".zstack");
     mkdirSync(zstackHome, { recursive: true });
     const repo = mkdtempSync(join(tmpdir(), "zstack-hyphen-cut-"));
-    spawnSync("git", ["init", "--quiet", "-b", "main"], { cwd: repo });
+    spawnSync("git", ["init", "--quiet", "-b", "main"], { cwd: repo, timeout: 30_000 });
     // Remote chosen to be long enough that constrainSourceId truncates and
     // the boundary lands inside the word `skill`.
-    spawnSync("git", ["remote", "add", "origin", "https://github.com/drummerms-av-sow-wiz/skill-270c0001.git"], { cwd: repo });
+    spawnSync("git", ["remote", "add", "origin", "https://github.com/drummerms-av-sow-wiz/skill-270c0001.git"], { cwd: repo, timeout: 30_000 });
 
     const r = spawnSync("bun", [SCRIPT, "--dry-run", "--code-only", "--quiet"], {
       encoding: "utf-8",
@@ -783,8 +934,8 @@ describe("constrainSourceId truncation (hyphen-boundary cut)", () => {
     const zstackHome = join(home, ".zstack");
     mkdirSync(zstackHome, { recursive: true });
     const repo = mkdtempSync(join(tmpdir(), "zstack-https-period-"));
-    spawnSync("git", ["init", "--quiet", "-b", "main"], { cwd: repo });
-    spawnSync("git", ["remote", "add", "origin", "https://github.com/foo/bar.git"], { cwd: repo });
+    spawnSync("git", ["init", "--quiet", "-b", "main"], { cwd: repo, timeout: 30_000 });
+    spawnSync("git", ["remote", "add", "origin", "https://github.com/foo/bar.git"], { cwd: repo, timeout: 30_000 });
 
     const r = spawnSync("bun", [SCRIPT, "--dry-run", "--code-only", "--quiet"], {
       encoding: "utf-8",

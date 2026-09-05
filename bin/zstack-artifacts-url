@@ -13,10 +13,10 @@
 #   zstack-artifacts-url --owner-repo <any-url>    # extract owner/repo
 #
 # Inputs accepted:
-#   https://github.com/zeid/zstack-artifacts-zeid
-#   https://github.com/zeid/zstack-artifacts-zeid.git
-#   git@github.com:zeid/zstack-artifacts-zeid.git
-#   ssh://git@gitlab.com/zeid/zstack-artifacts-zeid.git
+#   https://github.com/ZeidMahmoud/zstack-artifacts-garrytan
+#   https://github.com/ZeidMahmoud/zstack-artifacts-garrytan.git
+#   git@github.com:ZeidMahmoud/zstack-artifacts-garrytan.git
+#   ssh://git@gitlab.com/ZeidMahmoud/zstack-artifacts-garrytan.git
 #   git@gitlab.example.org:team/zstack-artifacts-team.git
 #
 # Output: the requested form on stdout. Exits non-zero on parse failure with

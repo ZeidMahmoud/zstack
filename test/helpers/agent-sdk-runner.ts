@@ -36,6 +36,7 @@ import {
 import * as fs from 'fs';
 import * as path from 'path';
 import { resolveClaudeBinary as resolveClaudeBinaryShared } from '../../browse/src/claude-bin';
+import { hermeticChildEnv } from './hermetic-env';
 import type { SkillTestResult } from './session-runner';
 
 // ---------------------------------------------------------------------------
@@ -298,7 +299,22 @@ export async function runAgentSdkTest(
   const sem = getApiSemaphore();
   const maxRetries = opts.maxRetries ?? 3;
   const queryImpl: QueryProvider = opts.queryProvider ?? query;
-  const model = opts.model ?? 'claude-opus-4-7';
+  // Default matches session-runner's Sonnet (D1a, 2026-08): the old Opus
+  // default was an inconsistency between the two runners, not a choice —
+  // tests that need Opus pin it via opts.model (30+ already do).
+  const model = opts.model ?? 'claude-sonnet-4-6';
+
+  // NOTE on env: the SDK child gets the COMPLETE hermetic env (allowlist
+  // scrub + ANTHROPIC_API_KEY + hermetic CLAUDE_CONFIG_DIR/ZSTACK_HOME), with
+  // per-test opts.env merging last. The historical "passing env: breaks SDK
+  // auth" failure (old CLAUDE.md warning) was partial-env replacement —
+  // Options.env REPLACES the child's entire environment, so an object without
+  // the key killed auth. A complete env is safe (validated 2026-06-12 via
+  // query() with hermeticChildEnv(): success, real cost, Bash tool working).
+  // Do not mutate process.env ambiently here (it would leak into later
+  // interactive-path tests in the same Bun process — Codex review finding);
+  // ambient ANTHROPIC_API_KEY mutation by tests still works because the
+  // builder reads process.env at call time.
 
   let attempt = 0;
   let lastErr: unknown = null;
@@ -349,7 +365,7 @@ export async function runAgentSdkTest(
         permissionMode: resolvedPermissionMode,
         allowDangerouslySkipPermissions: resolvedPermissionMode === 'bypassPermissions',
         settingSources: opts.settingSources ?? [],
-        env: opts.env,
+        env: hermeticChildEnv(opts.env),
         pathToClaudeCodeExecutable: opts.pathToClaudeCodeExecutable,
         ...(hasCanUseTool ? { canUseTool: opts.canUseTool } : {}),
       };

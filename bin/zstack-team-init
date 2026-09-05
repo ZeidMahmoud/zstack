@@ -7,6 +7,16 @@
 #
 # Run from the root of your team's repo (not from the zstack directory).
 
+# Heredoc delivery guard. bash 5.2+ writes a heredoc body <=64KiB through a
+# pipe in the forked child before exec, with no reader on the other end. On
+# macOS under pipe-KVA pressure a fresh pipe gets a 512-byte buffer, so any
+# body >=512B blocks write() forever and the script hangs at startup with no
+# output. Compat level 50 restores the tempfile path. These scripts are
+# bash-3.2-clean, so the compat level costs them nothing. Not exported: the
+# guard is per-script, and it survives `bash script.sh` call sites that
+# bypass the shebang.
+BASH_COMPAT=50
+
 set -euo pipefail
 
 MODE="${1:-}"
@@ -54,11 +64,11 @@ fi
 if [ "$MODE" = "optional" ]; then
   SNIPPET='## zstack (recommended)
 
-This project uses [zstack](https://github.com/zeid/zstack) for AI-assisted workflows.
+This project uses [zstack](https://github.com/ZeidMahmoud/zstack) for AI-assisted workflows.
 Install it for the best experience:
 
 ```bash
-git clone --depth 1 https://github.com/zeid/zstack.git ~/.claude/skills/zstack
+git clone --depth 1 https://github.com/ZeidMahmoud/zstack.git ~/.claude/skills/zstack
 cd ~/.claude/skills/zstack && ./setup --team
 ```
 
@@ -70,7 +80,11 @@ else
 **Before doing ANY work, verify zstack is installed:**
 
 ```bash
-test -d ~/.claude/skills/zstack/bin && echo "ZSTACK_OK" || echo "ZSTACK_MISSING"
+_GS=""
+for _D in "${ZSTACK_ROOT:-}" "$HOME/.claude/skills/zstack" "$HOME/.codex/skills/zstack" "$HOME/.factory/skills/zstack" "$HOME/.kiro/skills/zstack" "$HOME/.config/opencode/skills/zstack" "$HOME/.slate/skills/zstack" "$HOME/.cursor/skills/zstack" "$HOME/.openclaw/skills/zstack" "$HOME/.hermes/skills/zstack" "$HOME/.gbrain/skills/zstack" "$HOME/.zstack/repos/zstack"; do
+  [ -z "$_GS" ] && [ -n "$_D" ] && [ -d "$_D/bin" ] && _GS="$_D"
+done
+[ -n "$_GS" ] && echo "ZSTACK_OK: $_GS" || echo "ZSTACK_MISSING"
 ```
 
 If ZSTACK_MISSING: STOP. Do not proceed. Tell the user:
@@ -78,7 +92,7 @@ If ZSTACK_MISSING: STOP. Do not proceed. Tell the user:
 > zstack is required for all AI-assisted work in this repo.
 > Install it:
 > ```bash
-> git clone --depth 1 https://github.com/zeid/zstack.git ~/.claude/skills/zstack
+> git clone --depth 1 https://github.com/ZeidMahmoud/zstack.git ~/.claude/skills/zstack
 > cd ~/.claude/skills/zstack && ./setup --team
 > ```
 > Then restart your AI coding tool.
@@ -87,7 +101,8 @@ Do not skip skills, ignore zstack errors, or work around missing zstack.
 
 Using zstack skills: After install, skills like /qa, /ship, /review, /investigate,
 and /browse are available. Use /browse for all web browsing.
-Use ~/.claude/skills/zstack/... for zstack file paths (the global path).'
+Use the resolved install path above for zstack file paths
+(default: ~/.claude/skills/zstack).'
 fi
 
 # Check if CLAUDE.md already has a zstack section
@@ -114,21 +129,30 @@ if [ "$MODE" = "required" ]; then
   cat > "$HOOKS_DIR/check-zstack.sh" << 'HOOK_EOF'
 #!/bin/bash
 # Block skill usage when zstack is not installed globally.
+#
+# Resolve the install root the way zstack skill preambles do: the ZSTACK_ROOT
+# env var first, then every host's global install location, then the migrated
+# repo location. Block only when NONE exist (#2500 — hardcoding
+# ~/.claude/skills/zstack false-blocked Codex-host and migrated-repo installs).
+_ZSTACK_ROOT=""
+for _D in "${ZSTACK_ROOT:-}" "$HOME/.claude/skills/zstack" "$HOME/.codex/skills/zstack" "$HOME/.factory/skills/zstack" "$HOME/.kiro/skills/zstack" "$HOME/.config/opencode/skills/zstack" "$HOME/.slate/skills/zstack" "$HOME/.cursor/skills/zstack" "$HOME/.openclaw/skills/zstack" "$HOME/.hermes/skills/zstack" "$HOME/.gbrain/skills/zstack" "$HOME/.zstack/repos/zstack"; do
+  [ -z "$_ZSTACK_ROOT" ] && [ -n "$_D" ] && [ -d "$_D/bin" ] && _ZSTACK_ROOT="$_D"
+done
 
-if [ ! -d "$HOME/.claude/skills/zstack/bin" ]; then
+if [ -z "$_ZSTACK_ROOT" ]; then
   cat >&2 <<'MSG'
 BLOCKED: zstack is not installed globally.
 
 zstack is required for AI-assisted work in this repo.
 
 Install it:
-  git clone --depth 1 https://github.com/zeid/zstack.git ~/.claude/skills/zstack
+  git clone --depth 1 https://github.com/ZeidMahmoud/zstack.git ~/.claude/skills/zstack
   cd ~/.claude/skills/zstack && ./setup --team
 
 Then restart your AI coding tool.
 MSG
-  echo '{"permissionDecision":"deny","message":"zstack is required but not installed. See stderr for install instructions."}'
-  exit 0
+  echo '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"zstack is required but not installed. See stderr for install instructions."}}'
+  exit 2
 fi
 
 echo '{}'
@@ -188,5 +212,5 @@ if [ ${#GENERATED[@]} -gt 0 ]; then
 fi
 echo ""
 echo "Each developer then runs:"
-echo "  git clone --depth 1 https://github.com/zeid/zstack.git ~/.claude/skills/zstack"
+echo "  git clone --depth 1 https://github.com/ZeidMahmoud/zstack.git ~/.claude/skills/zstack"
 echo "  cd ~/.claude/skills/zstack && ./setup --team"

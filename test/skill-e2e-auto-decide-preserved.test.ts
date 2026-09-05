@@ -37,15 +37,16 @@
  * practice but not the load-bearing behavior).
  */
 
-import { describe, test, expect } from 'bun:test';
+import { test, expect } from 'bun:test';
+import { CAPTURE_LONG_MS, PTY_MS } from './helpers/eval-budgets';
+import { describeE2ETier } from './helpers/e2e-gate';
 import { runPlanSkillObservation } from './helpers/claude-pty-runner';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import { spawnSync } from 'child_process';
 
-const shouldRun = !!process.env.EVALS && process.env.EVALS_TIER === 'periodic';
-const describeE2E = shouldRun ? describe : describe.skip;
+const describeE2E = describeE2ETier('periodic');
 
 const ROOT = path.resolve(import.meta.dir, '..');
 
@@ -58,6 +59,7 @@ describeE2E('AUTO_DECIDE opt-in preserved under Conductor flags (periodic)', () 
       const setRes = spawnSync(configBin, ['set', 'question_tuning', 'true'], {
         env: { ...process.env, ZSTACK_HOME: tmpHome },
         encoding: 'utf-8',
+        timeout: 30_000,
       });
       if (setRes.status !== 0) {
         throw new Error(`zstack-config set failed: ${setRes.stderr || setRes.stdout}`);
@@ -67,11 +69,14 @@ describeE2E('AUTO_DECIDE opt-in preserved under Conductor flags (periodic)', () 
       //    claude would resolve). The preference file path keys on this slug.
       const slugBin = path.join(ROOT, 'bin', 'zstack-slug');
       const slugRes = spawnSync(slugBin, [], {
+        // LIVE-REPO CWD: zstack-slug resolves the slug from this repo's git
+        // remote — must match what the spawned claude (repo cwd) resolves.
         cwd: ROOT,
         env: { ...process.env, ZSTACK_HOME: tmpHome },
         encoding: 'utf-8',
+        timeout: 30_000,
       });
-      // zstack-slug emits `eval`-able shell exports like `SLUG=zeid-zstack`.
+      // zstack-slug emits `eval`-able shell exports like `SLUG=garrytan-zstack`.
       const slug = (slugRes.stdout.match(/SLUG=([^\s;]+)/)?.[1] ?? 'unknown').replace(/['"]/g, '');
 
       // 3. Write the preference: plan-ceo-review-mode → never-ask. The
@@ -87,6 +92,7 @@ describeE2E('AUTO_DECIDE opt-in preserved under Conductor flags (periodic)', () 
         {
           env: { ...process.env, ZSTACK_HOME: tmpHome },
           encoding: 'utf-8',
+          timeout: 30_000,
         },
       );
       if (writeRes.status !== 0) {
@@ -100,11 +106,19 @@ describeE2E('AUTO_DECIDE opt-in preserved under Conductor flags (periodic)', () 
       }
 
       // 4. Run /plan-ceo-review with the Conductor flag set + isolated state.
+      //    ZSTACK_HOME=tmpHome is REQUIRED: the preference + question_tuning were
+      //    seeded there. Without it the spawned claude reads the real ~/.zstack,
+      //    never sees the never-ask preference, and the test silently exercises
+      //    the wrong state root (pre-existing bug, Codex #9 / Issue 13).
+      //    CONDUCTOR_WORKSPACE_PATH additionally proves auto-decide still WINS
+      //    over the Conductor prose redirect (precedence: settled preference
+      //    beats transport-avoidance).
       const obs = await runPlanSkillObservation({
         skillName: 'plan-ceo-review',
         inPlanMode: true,
         extraArgs: ['--disallowedTools', 'AskUserQuestion'],
-        timeoutMs: 300_000,
+        timeoutMs: CAPTURE_LONG_MS,
+        env: { ZSTACK_HOME: tmpHome, CONDUCTOR_WORKSPACE_PATH: tmpHome },
       });
 
       // 5. Pass: 'auto_decided' (the strongest signal) or 'plan_ready' with
@@ -127,5 +141,5 @@ describeE2E('AUTO_DECIDE opt-in preserved under Conductor flags (periodic)', () 
     } finally {
       try { fs.rmSync(tmpHome, { recursive: true, force: true }); } catch { /* best-effort */ }
     }
-  }, 360_000);
+  }, PTY_MS);
 });

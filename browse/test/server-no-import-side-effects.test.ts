@@ -42,9 +42,13 @@ const sigtermAfter = process.listenerCount('SIGTERM');
 const uncaughtAfter = process.listenerCount('uncaughtException');
 
 // Check that the zstack home directory wasn't populated as a side effect.
+// A lone \`.gitignore\` (the state-dir ignore guard, contents "*") is expected
+// and is NOT leaked state — ensureStateDir writes it so persisted cookies/logs
+// can never be git-committed. Any OTHER entry (browse.json, session-state.json,
+// logs) would be a real auto-start write and must still fail the guard.
 let zstackPopulated = false;
 try {
-  const entries = fs.readdirSync(${JSON.stringify(tmpZstack)});
+  const entries = fs.readdirSync(${JSON.stringify(tmpZstack)}).filter(e => e !== '.gitignore');
   zstackPopulated = entries.length > 0;
 } catch {
   // Doesn't exist — that's the win we want.

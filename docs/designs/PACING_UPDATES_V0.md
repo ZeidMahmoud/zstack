@@ -2,7 +2,7 @@
 
 **Status:** V1.1 plan (not yet implemented).
 **Extracted from:** [PLAN_TUNING_V1.md](./PLAN_TUNING_V1.md) during implementation, when review rigor revealed the pacing workstream had structural gaps unfixable via plan-text editing.
-**Authors:** the author (user), with AI-assisted reviews from Claude Opus 4.7 + OpenAI Codex gpt-5.4.
+**Authors:** Garry Tan (user), with AI-assisted reviews from Claude Opus 4.7 + OpenAI Codex gpt-5.4.
 **Review plan:** CEO + Codex + DX + Eng cycle, same rigor as V1.
 
 ## Credit
@@ -64,7 +64,7 @@ During V1 planning, a pacing workstream was drafted: rank findings, auto-accept 
 - **Flip round-trip:** User types `flip test-coverage-bookclub-form`. The original auto-accepted decision re-opens as an AskUserQuestion. User's new choice persists to the Silent Decisions block (or is removed if user flips to explicit surfacing).
 - **Per-phase observability:** `/plan-tune` can display per-phase AskUserQuestion counts for any session, reading from question-log.jsonl's new `phase` field.
 - **First-run reduction:** New users see ≤ 1 meta-prompt (lake intro) before their first real skill runs, vs. V1's 4 (lake + telemetry + proactive + routing).
-- **Human rerun:** Louise + the author independent qualitative reviews, same pattern as V1.
+- **Human rerun:** Louise + Garry independent qualitative reviews, same pattern as V1.
 
 ## Dependencies on V1
 
@@ -93,3 +93,17 @@ V2 items remain deferred:
 - Per-skill or per-topic explain levels
 - Team profiles
 - AST-based "delivered features" metric
+
+## Fold-in from fork port wave 2 (2026-08-14)
+
+The time-attack/zstack fork attacked the same question fatigue from a
+complementary axis: build-scale classification (session/hobby/project/
+product/venture) sizing the machinery, plus CHAIN-WIDE question budgets.
+Approved decision (CEO review 2026-08-14): fold the fork's ACCOUNTING
+judgment into this design round — the budget is chain-scoped (a chained
+review deducts from what's left, never resets), handoffs carry
+questions-already-spent, approval/mutation gates never count against it, and
+the budget is spent on the hardest-to-reverse decisions first. Do NOT adopt
+the fork's 5/8/12 numeric constants — the fork itself later replaced them
+with a zero-default autonomy dial. Scale sizes the machinery and sets the
+budget; pacing (this doc) ranks what the budget is spent on.

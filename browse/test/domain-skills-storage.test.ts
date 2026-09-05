@@ -1,10 +1,22 @@
-import { describe, it, expect, beforeEach } from 'bun:test';
+import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'bun:test';
 import { promises as fs } from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 
 const TMP_HOME = path.join(os.tmpdir(), `zstack-test-${process.pid}-${Date.now()}`);
-process.env.ZSTACK_HOME = TMP_HOME;
+
+// Scoped to this file's execution window — module-scope env assignment
+// leaks into sibling files in the shard process (see
+// test/zstack-home-module-scope.test.ts). freshImport() below runs inside
+// tests, so the beforeAll value is what ../src/domain-skills reads.
+const ORIGINAL_ZSTACK_HOME = process.env.ZSTACK_HOME;
+beforeAll(() => {
+  process.env.ZSTACK_HOME = TMP_HOME;
+});
+afterAll(() => {
+  if (ORIGINAL_ZSTACK_HOME === undefined) delete process.env.ZSTACK_HOME;
+  else process.env.ZSTACK_HOME = ORIGINAL_ZSTACK_HOME;
+});
 
 // Re-import after env var set so module reads updated ZSTACK_HOME
 async function freshImport() {

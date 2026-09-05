@@ -17,16 +17,24 @@ let zstackDir: string;
 let stateDir: string;
 
 function run(extraEnv: Record<string, string> = {}, args: string[] = []) {
+  // zstack-config (which this script shells out to for update_check) resolves
+  // state as ZSTACK_STATE_ROOT > ZSTACK_HOME > ZSTACK_STATE_DIR > ~/.zstack.
+  // Strip the higher-precedence vars so harness-env leftovers can never
+  // outrank the per-test ZSTACK_STATE_DIR isolation.
+  const env: Record<string, string | undefined> = {
+    ...process.env,
+    ZSTACK_DIR: zstackDir,
+    ZSTACK_STATE_DIR: stateDir,
+    ZSTACK_REMOTE_URL: `file://${join(zstackDir, 'REMOTE_VERSION')}`,
+  };
+  delete env.ZSTACK_STATE_ROOT;
+  delete env.ZSTACK_HOME;
+  Object.assign(env, extraEnv); // per-test overrides always win, deliberately
   const result = Bun.spawnSync(['bash', SCRIPT, ...args], {
-    env: {
-      ...process.env,
-      ZSTACK_DIR: zstackDir,
-      ZSTACK_STATE_DIR: stateDir,
-      ZSTACK_REMOTE_URL: `file://${join(zstackDir, 'REMOTE_VERSION')}`,
-      ...extraEnv,
-    },
+    env,
     stdout: 'pipe',
     stderr: 'pipe',
+    timeout: 30_000,
   });
   return {
     exitCode: result.exitCode,
@@ -42,6 +50,14 @@ beforeEach(() => {
   const binDir = join(zstackDir, 'bin');
   mkdirSync(binDir);
   symlinkSync(join(import.meta.dir, '..', '..', 'bin', 'zstack-config'), join(binDir, 'zstack-config'));
+  // v1.63+: the script sources bin/zstack-egress-lib.sh unconditionally
+  // (receipted fetch helpers). A real install always has it beside
+  // zstack-config; without this link every test failed at the source line —
+  // masked until the suite-truncation fix because the runner died first.
+  symlinkSync(
+    join(import.meta.dir, '..', '..', 'bin', 'zstack-egress-lib.sh'),
+    join(binDir, 'zstack-egress-lib.sh'),
+  );
 });
 
 afterEach(() => {

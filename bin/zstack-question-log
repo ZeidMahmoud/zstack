@@ -27,6 +27,12 @@
 # Append-only JSONL. Dedup is at read time in zstack-question-sensitivity --read-log.
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# Windows git-bash (#1950): pwd yields a POSIX path (/c/Users/...), which Bun
+# on Windows cannot resolve as an ES module specifier in bun -e imports.
+# cygpath -m converts to C:/Users/... which Bun accepts.
+case "$(uname -s)" in
+  MINGW*|MSYS*|CYGWIN*) command -v cygpath >/dev/null 2>&1 && SCRIPT_DIR="$(cygpath -m "$SCRIPT_DIR")" ;;
+esac
 eval "$("$SCRIPT_DIR/zstack-slug" 2>/dev/null)"
 # ZSTACK_STATE_ROOT takes precedence over ZSTACK_HOME (test isolation per D16).
 ZSTACK_HOME="${ZSTACK_STATE_ROOT:-${ZSTACK_HOME:-$HOME/.zstack}}"
@@ -38,7 +44,8 @@ INPUT="$1"
 TMPERR=$(mktemp)
 trap 'rm -f "$TMPERR"' EXIT
 set +e
-VALIDATED=$(printf '%s' "$INPUT" | bun -e "
+VALIDATED=$(printf '%s' "$INPUT" | ZSTACK_LIB_DIR="$SCRIPT_DIR/../lib" bun -e "
+const { hasInjection } = await import(process.env.ZSTACK_LIB_DIR + '/jsonl-store.ts');
 const path = require('path');
 const raw = await Bun.stdin.text();
 let j;
@@ -64,7 +71,10 @@ if (!j.question_id || !/^[a-z0-9-]+\$/.test(j.question_id) || j.question_id.leng
 //   'auq-other'        — user picked 'Other' and typed free text (Layer 8)
 //   'auto-decided'     — PreToolUse enforcement hook substituted the answer (T6)
 //   'codex-import-marker' / 'codex-import-pattern' — T9 backfill from Codex
-const ALLOWED_SOURCES = ['agent', 'hook', 'auq-other', 'auto-decided', 'codex-import-marker', 'codex-import-pattern'];
+//   'spawned-env-deny'  — spawned-session AUQ deny (#2733): the model, not a
+//                         human, resolves the gate; tagged so /plan-tune never
+//                         trains on machine picks as if a human made them
+const ALLOWED_SOURCES = ['agent', 'hook', 'auq-other', 'auto-decided', 'codex-import-marker', 'codex-import-pattern', 'spawned-env-deny'];
 if (j.source !== undefined) {
   if (!ALLOWED_SOURCES.includes(j.source)) {
     process.stderr.write('zstack-question-log: invalid source, must be one of: ' + ALLOWED_SOURCES.join(', ') + '\n');
@@ -104,23 +114,12 @@ if (j.question_summary.includes('\n')) {
   j.question_summary = j.question_summary.replace(/\n+/g, ' ');
 }
 
-// Injection defense on the summary — same patterns as learnings-log.
-const INJECTION_PATTERNS = [
-  /ignore\s+(all\s+)?previous\s+(instructions|context|rules)/i,
-  /you\s+are\s+now\s+/i,
-  /always\s+output\s+no\s+findings/i,
-  /skip\s+(all\s+)?(security|review|checks)/i,
-  /override[:\s]/i,
-  /\bsystem\s*:/i,
-  /\bassistant\s*:/i,
-  /\buser\s*:/i,
-  /do\s+not\s+(report|flag|mention)/i,
-];
-for (const pat of INJECTION_PATTERNS) {
-  if (pat.test(j.question_summary)) {
-    process.stderr.write('zstack-question-log: question_summary contains suspicious instruction-like content, rejected\n');
-    process.exit(1);
-  }
+// Injection defense on the summary — shared audited list (lib/jsonl-store.ts),
+// same source of truth as learnings-log and decision-log. The previous local
+// duplicate drifted (#1934): pattern fixes to the lib never propagated here.
+if (hasInjection(j.question_summary)) {
+  process.stderr.write('zstack-question-log: question_summary contains suspicious instruction-like content, rejected\n');
+  process.exit(1);
 }
 
 // Registry lookup for category + door_type enrichment.
@@ -172,9 +171,17 @@ if (j.recommended !== undefined) {
   if (j.recommended.length > 64) j.recommended = j.recommended.slice(0, 64);
 }
 
-// followed_recommendation — compute if both sides present.
-if (j.recommended !== undefined && j.user_choice !== undefined) {
-  j.followed_recommendation = j.user_choice === j.recommended;
+// followed_recommendation — compute if both sides present. An __unknown__
+// choice means extraction failed, not that the user rejected the
+// recommendation — leave the field absent so metrics can't be poisoned.
+// Strip a trailing (Recommended) marker from BOTH sides before comparing:
+// recommended usually arrives pre-stripped while user_choice is the raw
+// option label, so a user who picked the recommended option was scored as
+// NOT following it (#2400). NB: this JS lives inside a double-quoted
+// bun -e string — never use double quotes in it.
+if (j.recommended !== undefined && j.user_choice !== undefined && j.user_choice !== '__unknown__') {
+  const stripRec = (s) => String(s).replace(/\s*\(recommended\)\s*$/i, '').trim();
+  j.followed_recommendation = stripRec(j.user_choice) === stripRec(j.recommended);
 }
 
 // session_id — kebab-friendly; <=64 chars

@@ -12,7 +12,8 @@ import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-import { spawnSync } from 'child_process';
+
+import { runBin } from './helpers/run-bin';
 
 const ROOT = path.resolve(import.meta.dir, '..');
 const BIN_CONFIG = path.join(ROOT, 'bin', 'zstack-config');
@@ -28,19 +29,9 @@ afterEach(() => {
 });
 
 function run(...args: string[]): { stdout: string; stderr: string; status: number } {
-  // zstack-config precedence is `${ZSTACK_HOME:-${ZSTACK_STATE_DIR:-$HOME/.zstack}}`,
-  // so ZSTACK_HOME from the developer's parent env wins over the test's
-  // ZSTACK_STATE_DIR. Override both to isolate from the real ~/.zstack.
-  const res = spawnSync(BIN_CONFIG, args, {
-    env: { ...process.env, ZSTACK_STATE_DIR: tmpHome, ZSTACK_HOME: tmpHome },
-    encoding: 'utf-8',
-    cwd: ROOT,
-  });
-  return {
-    stdout: (res.stdout ?? '').trim(),
-    stderr: (res.stderr ?? '').trim(),
-    status: res.status ?? -1,
-  };
+  // runBin's zstackHome sets ZSTACK_HOME + ZSTACK_STATE_DIR together — the
+  // config-precedence isolation this file used to document by hand.
+  return runBin(BIN_CONFIG, args, { zstackHome: tmpHome, cwd: ROOT, trim: true });
 }
 
 describe('zstack-config explain_level', () => {
@@ -86,5 +77,22 @@ describe('zstack-config explain_level', () => {
     const garbage = run('set', 'explain_level', 'nonsense');
     expect(garbage.stderr).toContain('not recognized');
     expect(run('get', 'explain_level').stdout).toBe('default');
+  });
+});
+
+describe('zstack-config values with spaces', () => {
+  test('workspace_root preserves internal spaces on set/get/list', () => {
+    const value = path.join(os.tmpdir(), 'Conductor Workspaces');
+    expect(run('set', 'workspace_root', value).status).toBe(0);
+
+    expect(run('get', 'workspace_root').stdout).toBe(value);
+
+    const listed = run('list');
+    expect(listed.status).toBe(0);
+    expect(
+      listed.stdout
+        .split('\n')
+        .some((line) => line.includes('workspace_root:') && line.includes(value) && line.includes('(set)')),
+    ).toBe(true);
   });
 });

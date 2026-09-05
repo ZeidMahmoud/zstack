@@ -23,10 +23,13 @@
  */
 
 import { describe, test, expect } from 'bun:test';
+import { readFileSync } from 'node:fs';
 import {
   isPermissionDialogVisible,
   isNumberedOptionListVisible,
   isProseAUQVisible,
+  isScopeGateQuestionVisible,
+  isScopeGateAutoSelectVisible,
   isPlanReadyVisible,
   parseNumberedOptions,
   classifyVisible,
@@ -193,6 +196,113 @@ describe('isNumberedOptionListVisible', () => {
   });
 });
 
+describe('scope-gate render detectors', () => {
+  // The verbatim announcement string from the plan-eng/plan-design SKILL.md
+  // templates. If the template rewording drifts, THIS fixture fails first —
+  // before the paid plan-mode smokes silently degrade to vacuous asserts.
+  const TEMPLATE_ANNOUNCEMENT =
+    'Scope gate: plan mode — auto-selected B (reviewing <target>).';
+
+  describe('isScopeGateQuestionVisible', () => {
+    test('matches the clean prose gate render (question + option bodies)', () => {
+      const sample = `
+What should I review?
+A) The current branch diff — the work in progress on this branch.
+B) A plan or design doc I'll paste or point you to.
+C) A specific file, directory, or path.
+Recommendation: A when a branch diff exists, otherwise B.
+`;
+      expect(isScopeGateQuestionVisible(sample)).toBe(true);
+    });
+
+    test('matches the native numbered render (no lettered markers)', () => {
+      const sample = `
+  What should I review?
+
+  ❯ 1. The current branch diff — the work in progress on this branch.
+    2. A plan or design doc I'll paste or point you to.
+    3. A specific file, directory, or path.
+`;
+      expect(isScopeGateQuestionVisible(sample)).toBe(true);
+    });
+
+    test('matches the PTY-collapsed render (stripAnsi squished spaces)', () => {
+      const sample = 'WhatshouldIreview?A)Thecurrentbranchdiff—theworkinprogress';
+      expect(isScopeGateQuestionVisible(sample)).toBe(true);
+    });
+
+    test('stays false on narration quoting only the question', () => {
+      const sample =
+        "Normally I'd ask 'What should I review?' but plan mode is active, so I'm proceeding.";
+      expect(isScopeGateQuestionVisible(sample)).toBe(false);
+    });
+
+    test('stays false on unrelated review prose', () => {
+      const sample = 'I will review the current branch diff and report findings.';
+      expect(isScopeGateQuestionVisible(sample)).toBe(false);
+    });
+  });
+
+  describe('isScopeGateAutoSelectVisible', () => {
+    test('matches the verbatim template announcement', () => {
+      expect(isScopeGateAutoSelectVisible(TEMPLATE_ANNOUNCEMENT)).toBe(true);
+    });
+
+    test('matches a real announcement with a concrete target', () => {
+      const sample =
+        'Scope gate: plan mode — auto-selected B (reviewing ~/.claude/plans/my-feature.md). Running the Design Doc Check next.';
+      expect(isScopeGateAutoSelectVisible(sample)).toBe(true);
+    });
+
+    test('matches the PTY-collapsed announcement', () => {
+      const sample = 'Scopegate:planmode—auto-selectedB(reviewingPLAN.md).';
+      expect(isScopeGateAutoSelectVisible(sample)).toBe(true);
+    });
+
+    test('stays false on narration about the behavior', () => {
+      const sample = "In plan mode I'd auto-select B and review the active plan.";
+      expect(isScopeGateAutoSelectVisible(sample)).toBe(false);
+    });
+
+    test('stays false on a VERBATIM QUOTE of the announcement (negation narration)', () => {
+      // The exact announcement line sits quoted in the skill context, so a
+      // model explaining why it is NOT firing it can reproduce it byte-exact
+      // inside quotes — that must not trip a must-stay-false assert.
+      const sample =
+        'Not in plan mode, so I won\'t announce "Scope gate: plan mode — auto-selected B (reviewing <target>)." and will ask instead.';
+      expect(isScopeGateAutoSelectVisible(sample)).toBe(false);
+    });
+
+    test('a later real render still matches after an earlier quoted mention', () => {
+      const sample =
+        'Earlier I said I would render "Scope gate: plan mode — auto-selected B (…)" and now:\n' +
+        'Scope gate: plan mode — auto-selected B (reviewing PLAN.md).';
+      expect(isScopeGateAutoSelectVisible(sample)).toBe(true);
+    });
+
+    test('matches tense paraphrases WITH the announcement prefix (auto-selecting / auto-selects)', () => {
+      expect(
+        isScopeGateAutoSelectVisible('Scope gate: plan mode — auto-selecting B (reviewing the drafted plan).'),
+      ).toBe(true);
+      expect(isScopeGateAutoSelectVisible('Scope gate: plan mode — auto-selects B.')).toBe(true);
+    });
+
+    test('stays false on tense paraphrases WITHOUT the announcement prefix', () => {
+      expect(isScopeGateAutoSelectVisible('Auto-selecting B since we are in plan mode.')).toBe(false);
+    });
+
+    test('stays false on AUTO_DECIDE preamble output', () => {
+      const sample = 'Auto-decided scope question → B (your preference). Change with /plan-tune.';
+      expect(isScopeGateAutoSelectVisible(sample)).toBe(false);
+    });
+
+    test('stays false on a bare "selected B" without the announcement prefix', () => {
+      const sample = 'I selected B as the review target.';
+      expect(isScopeGateAutoSelectVisible(sample)).toBe(false);
+    });
+  });
+});
+
 describe('isProseAUQVisible', () => {
   test('matches 4 lettered options A) B) C) D) at line starts (plan-eng prose AUQ shape)', () => {
     const sample = `
@@ -289,6 +399,109 @@ This refers to (see option B) above and also to point A) earlier.
   test('returns false on plain text with no option markers', () => {
     expect(isProseAUQVisible('Just some plain text output from the model.')).toBe(false);
     expect(isProseAUQVisible('')).toBe(false);
+  });
+
+  // Pattern 3: markdown bold-bullet options — office-hours renders its mode
+  // question this way under --disallowedTools, with no letter/number marker.
+  test('matches office-hours markdown bold-bullet mode question (Pattern 3)', () => {
+    const sample = `
+> Before we dig in — what's your goal with this?
+>
+> - **Building a startup** (or thinking about it)
+> - **Intrapreneurship** — internal project at a company, need to ship fast
+> - **Hackathon / demo** — time-boxed, need to impress
+> - **Open source / research** — building for a community
+> - **Learning** — teaching yourself to code
+❯
+`;
+    expect(isProseAUQVisible(sample)).toBe(true);
+  });
+
+  test('bold-bullets require a preceding interrogative — no "?" => false', () => {
+    // 3+ bold bullets but no question stem: this is a feature list, not an AUQ.
+    const sample = `
+Here is what shipped:
+- **Faster builds** via caching
+- **Smaller binaries** through tree-shaking
+- **Better errors** with source maps
+`;
+    expect(isProseAUQVisible(sample)).toBe(false);
+  });
+
+  test('a question with fewer than 3 bold bullets stays false (guard)', () => {
+    const sample = `
+Which approach do you prefer?
+- **Option one** is simpler
+- **Option two** is faster
+`;
+    expect(isProseAUQVisible(sample)).toBe(false);
+  });
+
+  test('plain (non-bold) bullets after a question do not trigger Pattern 3', () => {
+    // Only bold bullets count — plain "- text" prose lists are too common.
+    const sample = `
+What should we do about this?
+- run the tests
+- ship the fix
+- file a follow-up
+`;
+    expect(isProseAUQVisible(sample)).toBe(false);
+  });
+
+  test('Pattern 3 still defers to a live native cursor list (❯ 1.)', () => {
+    const sample = `
+> What's your goal?
+❯ 1. **Building a startup**
+  2. **Intrapreneurship**
+  3. **Hackathon**
+`;
+    // The ❯1. cursor gate fires first — native list handling owns this.
+    expect(isProseAUQVisible(sample)).toBe(false);
+  });
+
+  // Pattern 4/5: collapsed-form prose AUQ. stripAnsi destroys the newlines +
+  // inter-word spaces, so a real prose AUQ arrives collapsed and defeats the
+  // line-anchored Patterns 1-3. These are the dominant Shape-B render mode in
+  // the plan-design smoke + floor timeouts — verbatim de-spinnered bytes from
+  // the real failing runs (bdm3sucql.output).
+  test('matches the real collapsed floor render (colon-delimited, Pattern 4/5)', () => {
+    const sample =
+      'The review is blocked on D1—reply withA, B, r Cabovetocontinue:' +
+      '- A(recommended): Spec thefull P1AskUserQuestioncopy in this review' +
+      '-B:LeaveP1copytotheimplementerwithstructuralrequirements' +
+      'C: Add a placeholder template to the plan';
+    expect(isProseAUQVisible(sample)).toBe(true);
+  });
+
+  test('matches the real collapsed plan-mode render (Recommendation + collapsed A)/B), Pattern 4/5)', () => {
+    const sample =
+      'Recommendation:A—writethecopynow.(recommended)A) Writ the fullcopy in thisdesign review— now.' +
+      '(recommended) Completeness:10/10 B) Leveit to theimplemente — task spec is enough.' +
+      'Reply withA (write the copy now)orB(leavetoimplementer)';
+    expect(isProseAUQVisible(sample)).toBe(true);
+  });
+
+  test('collapsed-form requires BOTH signals — single B) + word "recommendation" stays false', () => {
+    // Only one punctuated letter marker: the two-signal contract is not met.
+    const sample =
+      'We should consider option B) here. My recommendation is to do it now.';
+    expect(isProseAUQVisible(sample)).toBe(false);
+  });
+
+  test('collapsed-form requires letter punctuation — comma-only "ReplywithA,B,orC" stays false', () => {
+    // Reply-instruction present, but the letters carry no ) : or ( punctuation,
+    // so they could be incidental enumerations in running prose. Stays false.
+    const sample = 'ReplywithA,B,orC';
+    expect(isProseAUQVisible(sample)).toBe(false);
+  });
+
+  test('collapsed-form does not regress the existing FP guard (see option B) ... point A))', () => {
+    // The classic citation FP: a model referencing prior options in prose.
+    // No reply-instruction / recommendation marker on its own line, so the
+    // collapsed-form signal does not fire either.
+    const sample =
+      'As noted (see option B) above, and the earlier point A) we discussed, this is fine.';
+    expect(isProseAUQVisible(sample)).toBe(false);
   });
 });
 
@@ -549,6 +762,45 @@ describe('runPlanSkillObservation env passthrough surface', () => {
       env: { QUESTION_TUNING: 'false', EXPLAIN_LEVEL: 'default' },
     };
     expect(opts.env).toEqual({ QUESTION_TUNING: 'false', EXPLAIN_LEVEL: 'default' });
+  });
+});
+
+describe('launchClaudePty model pin (static tripwire)', () => {
+  // Why static-grep, not a behavioral assert: the spawn fires immediately
+  // inside launchClaudePty, so asserting the built args array would require
+  // extracting an arg-builder seam — which rewrites the exact region kyoto-v5's
+  // hermetic --strict-mcp-config insertion edits, reintroducing a merge
+  // conflict the placement deliberately avoids. The end-to-end behavioral proof
+  // is the live PTY smoke (skill-e2e-plan-*-plan-mode.test.ts) running under the
+  // pinned model. These grep-level guards stop a refactor from silently
+  // dropping the pin or reordering it past extraArgs.
+  const src = readFileSync(new URL('./claude-pty-runner.ts', import.meta.url), 'utf-8');
+
+  test('ClaudePtyOptions exposes model?: string', () => {
+    const opts: ClaudePtyOptions = { model: 'claude-sonnet-4-6' };
+    expect(opts.model).toBe('claude-sonnet-4-6');
+  });
+
+  test('spawn args push --model from the EVALS_MODEL fallback chain', () => {
+    expect(src).toContain("args.push('--model', model)");
+    // opts.model -> EVALS_MODEL -> 'claude-sonnet-4-6' (mirrors session-runner.ts:144)
+    expect(src).toMatch(
+      /opts\.model\s*\?\?\s*process\.env\.EVALS_MODEL\s*\?\?\s*'claude-sonnet-4-6'/,
+    );
+  });
+
+  test('--model is pushed BEFORE extraArgs so a per-test --model override wins', () => {
+    const modelPush = src.indexOf("args.push('--model', model)");
+    const extraArgsPush = src.indexOf('if (opts.extraArgs) args.push(...opts.extraArgs)');
+    expect(modelPush).toBeGreaterThan(-1);
+    expect(extraArgsPush).toBeGreaterThan(-1);
+    expect(modelPush).toBeLessThan(extraArgsPush);
+  });
+
+  test('all three plan-skill wrappers forward model to launchClaudePty', () => {
+    // Count must match the number of wrappers (observation, counting, floor).
+    const forwards = src.match(/^\s*model: opts\.model,$/gm) ?? [];
+    expect(forwards.length).toBe(3);
   });
 });
 

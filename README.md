@@ -102,16 +102,34 @@ cd ~/zstack && ./setup
 
 Or target a specific agent with `./setup --host <name>`:
 
-| Agent | Flag | Skills install to |
-|-------|------|-------------------|
-| OpenAI Codex CLI | `--host codex` | `~/.codex/skills/zstack-*/` |
-| OpenCode | `--host opencode` | `~/.config/opencode/skills/zstack-*/` |
-| Cursor | `--host cursor` | `~/.cursor/skills/zstack-*/` |
-| Factory Droid | `--host factory` | `~/.factory/skills/zstack-*/` |
-| Slate | `--host slate` | `~/.slate/skills/zstack-*/` |
-| Kiro | `--host kiro` | `~/.kiro/skills/zstack-*/` |
-| Hermes | `--host hermes` | `~/.hermes/skills/zstack-*/` |
-| GBrain (mod) | `--host gbrain` | `~/.gbrain/skills/zstack-*/` |
+| Agent | Flag | What you get |
+|-------|------|--------------|
+| OpenAI Codex CLI | `--host codex` | Full install → `${CODEX_HOME:-~/.codex}/skills/zstack-*/` |
+| OpenCode | `--host opencode` | Full install → `~/.config/opencode/skills/zstack-*/` |
+| Cursor | `--host cursor` | Full install → `~/.cursor/skills/zstack-*/` |
+| Factory Droid | `--host factory` | Full install → `~/.factory/skills/zstack-*/` |
+| Kiro | `--host kiro` | Full install → `~/.kiro/skills/zstack-*/` |
+| Slate | `--host slate` | Pointer to the Claude install (Slate reads `.claude/skills` as a fallback) |
+| OpenClaw | `--host openclaw` | ACP spawn pointers + methodology artifacts via `gen:skill-docs --host openclaw` + the instruction-only digest below (full guide: [docs/OPENCLAW.md](docs/OPENCLAW.md)) |
+| Hermes | `--host hermes` | Methodology artifacts via `gen:skill-docs --host hermes` + the instruction-only digest below |
+| GBrain (mod) | `--host gbrain` | Brain-aware skill variants, shipped from the GBrain repo |
+
+**Instruction-only tier (any rules-reading agent — Zed, Amp, Jules, side projects):**
+copy the 2KB digest at [`agents-digest/zstack-AGENTS.md`](agents-digest/zstack-AGENTS.md)
+into a location your agent reads (for example, append it to your project's `AGENTS.md`).
+It carries zstack's ethos, reuse ladder, and voice rules — no install required. The
+digest's first line shows its zstack version; re-copy it after upgrading.
+
+For Codex, setup reads the top-level `model` from
+`${CODEX_HOME:-~/.codex}/config.toml` and generates the matching behavioral
+profile. `gpt-5.6-sol` automatically receives bounded-scope instructions that
+finish the requested lake without expanding into adjacent cleanup or speculative
+hardening. The Sol profile is exact-match only: dated snapshots and other 5.6
+variants get the generic GPT profile, and setup warns on near-misses like
+`gpt-5.6-sol-2026-08-01`. Override detection with `./setup --host codex --model <id>` — the
+override applies to that run only; set `model` in your Codex `config.toml` to
+make it stick across upgrades. After changing your Codex model, rerun
+`./setup --host codex` to regenerate the skills.
 
 **Want to add support for another agent?** See [docs/ADDING_A_HOST.md](docs/ADDING_A_HOST.md).
 It's one TypeScript config file, zero code changes.
@@ -175,7 +193,7 @@ Each skill feeds into the next. `/office-hours` writes a design doc that `/plan-
 | `/plan-design-review` | **Senior Designer** | Rates each design dimension 0-10, explains what a 10 looks like, then edits the plan to get there. AI Slop detection. Interactive — one AskUserQuestion per design choice. |
 | `/plan-devex-review` | **Developer Experience Lead** | Interactive DX review: explores developer personas, benchmarks against competitors' TTHW, designs your magical moment, traces friction points step by step. Three modes: DX EXPANSION, DX POLISH, DX TRIAGE. 20-45 forcing questions. |
 | `/design-consultation` | **Design Partner** | Build a complete design system from scratch. Researches the landscape, proposes creative risks, generates realistic product mockups. |
-| `/review` | **Staff Engineer** | Find the bugs that pass CI but blow up in production. Auto-fixes the obvious ones. Flags completeness gaps. |
+| `/review` | **Staff Engineer** | Find the bugs that pass CI but blow up in production. Auto-fixes the obvious ones. Flags completeness gaps. Advisory simplification lens flags over-built code — never blocks, never auto-applies. |
 | `/investigate` | **Debugger** | Systematic root-cause debugging. Iron Law: no fixes without investigation. Traces data flow, tests hypotheses, stops after 3 failed fixes. |
 | `/design-review` | **Designer Who Codes** | Same audit as /plan-design-review, then fixes what it finds. Atomic commits, before/after screenshots. |
 | `/devex-review` | **DX Tester** | Live developer experience audit. Actually tests your onboarding: navigates docs, tries the getting started flow, times TTHW, screenshots errors. Compares against `/plan-devex-review` scores — the boomerang that shows if your plan matched reality. |
@@ -194,9 +212,11 @@ Each skill feeds into the next. `/office-hours` writes a design doc that `/plan-
 | `/retro` | **Eng Manager** | Team-aware weekly retro. Per-person breakdowns, shipping streaks, test health trends, growth opportunities. `/retro global` runs across all your projects and AI tools (Claude Code, Codex, Gemini). |
 | `/browse` | **QA Engineer** | Give the agent eyes. Real Chromium browser, real clicks, real screenshots. ~100ms per command. `/open-zstack-browser` launches ZStack Browser with sidebar, anti-bot stealth, and auto model routing. |
 | `/setup-browser-cookies` | **Session Manager** | Import cookies from your real browser (Chrome, Arc, Brave, Edge) into the headless session. Test authenticated pages. |
-| `/autoplan` | **Review Pipeline** | One command, fully reviewed plan. Runs CEO → design → eng review automatically with encoded decision principles. Surfaces only taste decisions for your approval. |
+| `/autoplan` | **Review Pipeline** | One command, fully reviewed plan. Runs CEO → design → DX → eng review automatically (eng always last, so the shipping gate reviews the final amended plan) with encoded decision principles. Surfaces only taste decisions for your approval. |
 | `/spec` | **Spec Author** | Turn vague intent into a precise, executable spec in five phases (why, scope, technical with mandatory code-reading, draft, file). Codex quality gate before file (blocks below 7/10), fail-closed secret redaction, dedupe against existing issues, archive to `$ZSTACK_STATE_ROOT/projects/$SLUG/specs/` for team-corpus recall. `--execute` spawns `claude -p` in a fresh worktree; `/ship` auto-closes the source issue on merge. Plan-mode aware. |
 | `/learn` | **Memory** | Manage what zstack learned across sessions. Review, search, prune, and export project-specific patterns, pitfalls, and preferences. Learnings compound across sessions so zstack gets smarter on your codebase over time. |
+| `/make-pdf` | **Publisher** | Markdown in, publication-quality document out. Mermaid and excalidraw fences render as vector diagrams, fully offline. Images scale to the page and never truncate; wide diagrams get their own landscape page. `--to html` emits one self-contained file, `--to docx` a Word doc. |
+| `/diagram` | **Diagram Maker** | English in, editable diagram out. Emits a triplet: mermaid source, `.excalidraw` you can open and edit on excalidraw.com (hand-drawn style), and rendered SVG/PNG. Zero network. Embed the source in markdown and `/make-pdf` renders it. |
 
 ### Which review should I use?
 
@@ -205,14 +225,14 @@ Each skill feeds into the next. `/office-hours` writes a design doc that `/plan-
 | **End users** (UI, web app, mobile) | `/plan-design-review` | `/design-review` |
 | **Developers** (API, CLI, SDK, docs) | `/plan-devex-review` | `/devex-review` |
 | **Architecture** (data flow, perf, tests) | `/plan-eng-review` | `/review` |
-| **All of the above** | `/autoplan` (runs CEO → design → eng → DX, auto-detects which apply) | — |
+| **All of the above** | `/autoplan` (runs CEO → design → DX → eng, auto-detects which apply; eng always last) | — |
 
 ### Power tools
 
 | Skill | What it does |
 |-------|-------------|
 | `/codex` | **Second Opinion** — independent code review from OpenAI Codex CLI. Three modes: review (pass/fail gate), adversarial challenge, and open consultation. Cross-model analysis when both `/review` and `/codex` have run. |
-| `/careful` | **Safety Guardrails** — warns before destructive commands (rm -rf, DROP TABLE, force-push). Say "be careful" to activate. Override any warning. |
+| `/careful` | **Safety Guardrails** — warns before destructive commands (rm -rf, DROP TABLE, force-push). Say "be careful" to activate. Override any MEDIUM warning; root/home recursive deletes and default-branch force-pushes are hard-denied. |
 | `/freeze` | **Edit Lock** — restrict file edits to one directory. Prevents accidental changes outside scope while debugging. |
 | `/guard` | **Full Safety** — `/careful` + `/freeze` in one command. Maximum safety for prod work. |
 | `/unfreeze` | **Unlock** — remove the `/freeze` boundary. |
@@ -224,7 +244,7 @@ Each skill feeds into the next. `/office-hours` writes a design doc that `/plan-
 | `/ios-qa` | **iOS Live-Device QA (v1.43.0.0+)** — drive a real iPhone over USB CoreDevice via an embedded `StateServer` in the app. Read Swift source, codegen typed `@Observable` accessors, run the agent loop. Optional `--tailnet` flag exposes the device to OpenClaw or any HTTP-capable agent on your Tailscale tailnet so remote agents can run iOS QA without ever touching the hardware. Capability-tier allowlist (observe/interact/mutate/restore), per-device session lock, audit log. |
 | `/ios-fix`, `/ios-design-review`, `/ios-clean`, `/ios-sync` | iOS bug-fix loop, designer's-eye HIG audit, debug-bridge cleanup, and accessor resync. See `docs/skills.md`. End-to-end walkthrough: [docs/howto-ios-testing-with-zstack.md](docs/howto-ios-testing-with-zstack.md). |
 
-### New binaries (v0.19)
+### Standalone binaries
 
 Beyond the slash-command skills, zstack ships standalone CLIs for workflows that don't belong inside a session:
 
@@ -232,8 +252,35 @@ Beyond the slash-command skills, zstack ships standalone CLIs for workflows that
 |---------|-------------|
 | `zstack-model-benchmark` | **Cross-model benchmark** — run the same prompt through Claude, GPT (via Codex CLI), and Gemini; compare latency, tokens, cost, and (optionally) LLM-judge quality score. Auth detected per provider, unavailable providers skip cleanly. Output as table, JSON, or markdown. `--dry-run` validates flags + auth without spending API calls. |
 | `zstack-taste-update` | **Design taste learning** — writes approvals and rejections from `/design-shotgun` into a persistent per-project taste profile. Decays 5%/week. Feeds back into future variant generation so the system learns what you actually pick. |
+| `zstack-egress` | **Egress receipt auditor** — every zstack-initiated off-machine send writes a tamper-evident, hash-chained receipt to `~/.zstack/security/egress.jsonl` before the send. `list` shows what zstack attempted to send and to which host, `grants` shows the standing consent settings plus the exact command that revokes each, `verify` recomputes the hash chain and exits 3 on tamper (catches edits, reordering, and mid-chain deletion; truncating or deleting the ledger itself is out of scope — it's a forensic log, not tamper-proof storage). |
+| `zstack-context-bill` | **Token bill-of-materials** — read-only, offline audit of what an installed skills tree costs in tokens: always-on frontmatter every session pays vs per-invocation SKILL.md + forced references. `--diff` compares two trees, `--budget` enforces a ceiling, `--exact` opts into Anthropic `count_tokens` (sends file text off-machine; writes an egress receipt first, degrades to the offline estimate if the receipt can't be written). |
+| `zstack-code-intelligence` | **Code-intelligence provider picker** — wraps GBrain, Sourcebot, and Graphify behind one interface: `options`/`status` to see what's available, `select` to pick one, `index`/`search` to use it, `suggest` to check whether the one-time indexing offer should fire here. The offer triggers on large repos (1,000+ tracked files; a decline is persisted). Non-local providers refuse to index *or search* until you record per-repo consent (`consent <repo> yes\|no` — the query text is repo-derived content), the per-repo trust policy's deny and read-only tiers veto write-class operations regardless of consent, and every off-machine send writes an egress receipt. Fully optional — with nothing selected, zstack falls back to grep. |
+| `zstack-verify-gate` | **Verification stop hook (opt-in)** — blocks a Claude Code turn from ending until the project's declared verify command passes (after 3 blocked re-entries it yields with a loud still-RED warning instead of looping forever). Declare it on one line in CLAUDE.md: `<!-- zstack:verify: bun test -->`. Hooks bypass the permission system, so a declared command never runs until you trust it once per repo (`zstack-verify-gate --trust`); editing the command invalidates trust until re-granted, and every grant is audit-logged. `./setup` never registers it for you — opt in with `zstack-settings-hook add-event --event Stop --command ~/.claude/skills/zstack/bin/zstack-verify-gate --source verify-gate`, remove with `zstack-settings-hook remove-source --source verify-gate`. |
+| `zstack-wtree` | **Working-tree fingerprint** — prints a content hash of what's actually on disk (temp index seeded from the stat cache, ~40x cheaper than a full re-hash; untracked source counts, gitignored scratch doesn't). Identical content fingerprints identically through commits, rebases, amends, and squashes — it's what binds reviews and test evidence to content instead of commit SHAs. |
+| `zstack-evidence` | **Verification-evidence ledger** — `run --label <lane> -- <cmd>` transparently wraps any test command (the child's exit code always passes through) and records what ran against which working-tree fingerprint; `check` grades each label FRESH/STALE/MISSING with `--expect-cmd`, `--max-age`, and `--allow-paths` binding. /ship and /land-and-deploy cite fresh evidence instead of re-running suites. Per-run logs are 0600, capped at 2MB, pruned after 30 days; the ledger and logs stay machine-local by design. |
+| `zstack-issue-guard` | **Tracker-text trust envelope** — fetches GitHub issue/PR text (`issue <n>`, `pr-body`, `pr-comments`, or `--stdin`) and wraps it in a labeled envelope so agents treat it as data: injection-shaped lines get labeled even through fullwidth and invisible-character evasion, and forged envelope banners are defused. Every tracker-text ingress in zstack routes through it, enforced by a CI scanner. |
 | `zstack-ios-qa-daemon` | **iOS QA daemon** — Mac-side broker between an agent and a connected iPhone over USB CoreDevice. Loopback by default; `--tailnet` opens a Tailscale-facing listener with identity-gated capability tiers. Single-instance via flock on `~/.zstack/ios-qa-daemon.pid`. See [docs/howto-ios-testing-with-zstack.md](docs/howto-ios-testing-with-zstack.md). |
 | `zstack-ios-qa-mint` | **iOS allowlist manager** — owner-grant CLI for the tailnet allowlist. `grant`/`revoke`/`list` against `~/.zstack/ios-qa-allowlist.json` (mode 0600). Remote agents never auto-allowlist; this is the explicit-intent path. |
+| `zstack-ios-qa-regen` | **iOS bridge regenerator** — deterministically installs the canonical DebugBridge package, generates typed state accessors, and records the installed zstack version. Safe to rerun after source changes or upgrades. |
+
+`./setup` also registers one default-on Stop hook in `~/.claude/settings.json`:
+`zstack-timeline-stop` (closes dangling session-timeline entries when a session
+is interrupted; fail-open — 2s internal budget, always exits 0, can never block
+a session). Opt out persistently with `./setup --no-timeline-stop-hook` — the
+choice lands in the `timeline_stop_hook` config key, survives upgrades, and an
+explicit "no" removes a live registration. `ZSTACK_TIMELINE_STOP_HOOK=no` and
+`zstack-config set timeline_stop_hook no` work too (flag > env > config).
+`./setup --no-team` skips it for that run, `zstack-settings-hook remove-source
+--source zstack-timeline-stop` removes it by hand, and `zstack-uninstall`
+removes it too.
+
+Hook registration is canonical-only: every hook command points at the stable
+`~/.claude/skills/zstack` install, never the tree setup ran from, so deleting
+a worktree or Conductor workspace can't leave dead hooks erroring in your
+sessions. Every `./setup` run also heals first: `zstack-settings-hook
+prune-stale --repoint` removes dead zstack hook entries, re-points stale ones
+at the stable install, and collapses duplicates, printing one line (and
+writing a backup beside the file) only when it changed something.
 
 ### Continuous checkpoint mode (opt-in, local by default)
 
@@ -278,7 +325,7 @@ zstack works well with one sprint. It gets interesting with ten running at once.
 
 **Personal automation.** The sidebar agent isn't just for dev workflows. Example: "Browse my kid's school parent portal and add all the other parents' names, phone numbers, and photos to my Google Contacts." Two ways to get authenticated: (1) log in once in the headed browser, your session persists, or (2) click the "cookies" button in the sidebar footer to import cookies from your real Chrome. Once authenticated, Claude navigates the directory, extracts the data, and creates the contacts.
 
-**Prompt injection defense.** Hostile web pages try to hijack your sidebar agent. zstack ships a layered defense: a 22MB ML classifier bundled with the browser scans every page and tool output locally, a Claude Haiku transcript check votes on the full conversation shape, a random canary token in the system prompt catches session exfil attempts across text, tool args, URLs, and file writes, and a verdict combiner requires two classifiers to agree before blocking (prevents single-model false positives on Stack Overflow-style instruction pages). A shield icon in the sidebar header shows status (green/amber/red). Opt in to a 721MB DeBERTa-v3 ensemble via `ZSTACK_SECURITY_ENSEMBLE=deberta` for 2-of-3 agreement. Emergency kill switch: `ZSTACK_SECURITY_OFF=1`. See [ARCHITECTURE.md](ARCHITECTURE.md#prompt-injection-defense-sidebar-agent) for the full stack.
+**Prompt injection defense.** Hostile web pages try to hijack your sidebar agent. zstack ships a layered defense: content filters (datamarking, hidden-element stripping, ARIA scrubbing, URL blocklist) on every page read, plus a 22MB ML classifier running locally in a sidecar subprocess that scans page-derived content before the agent sees it, with a verdict combiner that requires classifier agreement before blocking (prevents single-model false positives on Stack Overflow-style instruction pages). Everything runs on your machine, no network calls. Emergency kill switch: `ZSTACK_SECURITY_OFF=1`. See [ARCHITECTURE.md](ARCHITECTURE.md#prompt-injection-defense-sidebar-agent) for the full stack.
 
 **Browser handoff when the AI gets stuck.** Hit a CAPTCHA, auth wall, or MFA prompt? `$B handoff` opens a visible Chrome at the exact same page with all your cookies and tabs intact. Solve the problem, tell Claude you're done, `$B resume` picks up right where it left off. The agent even suggests it automatically after 3 consecutive failures.
 
@@ -325,6 +372,7 @@ If you don't have the repo cloned (e.g. you installed via a Claude Code paste an
 pkill -f "zstack.*browse" 2>/dev/null || true
 
 # 2. Remove per-skill directories whose SKILL.md points into zstack/
+#    (rm -rf, not rmdir — installed dirs also contain runtime-asset links)
 find ~/.claude/skills -mindepth 1 -maxdepth 1 -type d ! -name zstack 2>/dev/null |
 while IFS= read -r dir; do
   link="$dir/SKILL.md"
@@ -332,11 +380,12 @@ while IFS= read -r dir; do
   target=$(readlink "$link" 2>/dev/null) || continue
   case "$target" in
     zstack/*|*/zstack/*)
-      rm -f "$link"
-      rmdir "$dir" 2>/dev/null || true
+      rm -rf "$dir"
       ;;
   esac
 done
+# Alias skills install as copies (no symlink to detect) — remove by name
+rm -rf ~/.claude/skills/_zstack-command ~/.claude/skills/connect-chrome 2>/dev/null
 
 # 3. Remove zstack
 rm -rf ~/.claude/skills/zstack
@@ -345,10 +394,12 @@ rm -rf ~/.claude/skills/zstack
 rm -rf ~/.zstack
 
 # 5. Remove integrations (skip any you never installed)
-rm -rf ~/.codex/skills/zstack* 2>/dev/null
+rm -rf "${CODEX_HOME:-$HOME/.codex}/skills/zstack"* 2>/dev/null
 rm -rf ~/.factory/skills/zstack* 2>/dev/null
 rm -rf ~/.kiro/skills/zstack* 2>/dev/null
 rm -rf ~/.openclaw/skills/zstack* 2>/dev/null
+rm -rf ~/.cursor/skills/zstack* 2>/dev/null
+rm -rf ~/.config/opencode/skills/zstack* 2>/dev/null
 
 # 6. Remove temp files
 rm -f /tmp/zstack-* 2>/dev/null
@@ -357,6 +408,14 @@ rm -f /tmp/zstack-* 2>/dev/null
 rm -rf .zstack .zstack-worktrees .claude/skills/zstack 2>/dev/null
 rm -rf .agents/skills/zstack* .factory/skills/zstack* 2>/dev/null
 ```
+
+Manual removal leaves zstack's hook entries behind in `~/.claude/settings.json`
+(the uninstall script removes all of them for you, including entries whose
+`_zstack_source` tag was stripped). Edit that file and delete every hook whose
+command path points into `.claude/skills/zstack/`: the SessionStart auto-update
+hook, the AskUserQuestion PreToolUse/PostToolUse hooks, and the Stop hooks
+(session timeline, plus verify-gate if you opted in). Left in place, they error
+on every matching event once the install directory is gone.
 
 ### Clean up CLAUDE.md
 
@@ -378,7 +437,7 @@ I open sourced how I build software. You can fork it and make it your own.
 
 ## GBrain — persistent knowledge for your coding agent
 
-[GBrain](https://github.com/zeid/gbrain) is a persistent knowledge base for AI agents — think of it as the memory your agent actually keeps between sessions. ZStack gives you a one-command path from zero to "it's running, my agent can call it."
+[GBrain](https://github.com/garrytan/gbrain) is a persistent knowledge base for AI agents — think of it as the memory your agent actually keeps between sessions. ZStack gives you a one-command path from zero to "it's running, my agent can call it."
 
 ```bash
 /setup-gbrain
@@ -406,7 +465,7 @@ The skill asks once per repo. The decision is sticky across worktrees and branch
 **ZStack memory sync (different feature, same private-repo infra).** Optionally pushes your zstack state (learnings, CEO plans, design docs, retros, developer profile) to a private git repo so your memory follows you across machines, with a one-time privacy prompt (everything allowlisted / artifacts only / off) and a defense-in-depth secret scanner that blocks AWS keys, tokens, PEM blocks, and JWTs before they leave your machine.
 
 ```bash
-zstack-brain-init
+zstack-artifacts-init
 ```
 
 **Running zstack in Conductor?** Conductor explicitly strips `ANTHROPIC_API_KEY` and `OPENAI_API_KEY` from every workspace's process env, so paid evals and gbrain embeddings won't work out of the box. Set `ZSTACK_ANTHROPIC_API_KEY` and `ZSTACK_OPENAI_API_KEY` in Conductor's workspace env config instead — zstack's TS entry points promote them to canonical names at runtime. Full details and the contributor checklist for adding the import to new entry points: [Conductor + ZSTACK_* env vars](USING_GBRAIN_WITH_ZSTACK.md#conductor--zstack_-env-vars).
@@ -420,7 +479,8 @@ Other references: [docs/gbrain-sync.md](docs/gbrain-sync.md) (sync-specific guid
 | Doc | What it covers |
 |-----|---------------|
 | [Skill Deep Dives](docs/skills.md) | Philosophy, examples, and workflow for every skill (includes Greptile integration) |
-| [Builder Ethos](ETHOS.md) | Builder philosophy: Boil the Lake, Search Before Building, three layers of knowledge |
+| [Diagrams & Document Formats](docs/howto-diagrams-and-formats.md) | Mermaid/excalidraw fences in PDFs, image sizing and safety defaults, `--to html\|docx`, `/diagram` triplets |
+| [Builder Ethos](ETHOS.md) | Builder philosophy: Boil the Ocean, Search Before Building, three layers of knowledge |
 | [Using GBrain with ZStack](USING_GBRAIN_WITH_ZSTACK.md) | Every path, flag, bin helper, and troubleshooting step for `/setup-gbrain` |
 | [GBrain Sync](docs/gbrain-sync.md) | Cross-machine memory setup, privacy modes, troubleshooting |
 | [Architecture](ARCHITECTURE.md) | Design decisions and system internals |
@@ -437,6 +497,7 @@ zstack includes **opt-in** usage telemetry to help improve the project. Here's e
 - **What's sent (if you opt in):** skill name, duration, success/fail, zstack version, OS. That's it.
 - **What's never sent:** code, file paths, repo names, branch names, prompts, or any user-generated content.
 - **Change anytime:** `zstack-config set telemetry off` disables everything instantly.
+- **Every off-machine send is receipted.** Any zstack-initiated network send — telemetry included — writes a hash-chained, tamper-evident receipt to `~/.zstack/security/egress.jsonl` before the send; sensitive sinks refuse to send at all if the receipt can't be written. Audit with `zstack-egress list`, verify the chain with `zstack-egress verify` (exit 3 on tamper), see the standing consent settings with `zstack-egress grants`. The ledger records attempted sends so accidents are auditable — it's an audit trail, not a network firewall.
 
 Data is stored in [Supabase](https://supabase.com) (open source Firebase alternative). The schema is in [`supabase/migrations/`](supabase/migrations/) — you can verify exactly what's collected. The Supabase publishable key in the repo is a public key (like a Firebase API key) — row-level security policies deny all direct access. Telemetry flows through validated edge functions that enforce schema checks, event type allowlists, and field length limits.
 
@@ -454,7 +515,7 @@ Data is stored in [Supabase](https://supabase.com) (open source Firebase alterna
 
 **Want namespaced commands?** `cd ~/.claude/skills/zstack && ./setup --prefix` — switches from `/qa` to `/zstack-qa`. Useful if you run other skill packs alongside zstack.
 
-**Codex says "Skipped loading skill(s) due to invalid SKILL.md"?** Your Codex skill descriptions are stale. Fix: `cd ~/.codex/skills/zstack && git pull && ./setup --host codex` — or for repo-local installs: `cd "$(readlink -f .agents/skills/zstack)" && git pull && ./setup --host codex`
+**Codex says "Skipped loading skill(s) due to invalid SKILL.md"?** Your Codex skill descriptions are stale. Fix: `cd "${CODEX_HOME:-$HOME/.codex}/skills/zstack" && git pull && ./setup --host codex` — or for repo-local installs: `cd "$(readlink -f .agents/skills/zstack)" && git pull && ./setup --host codex`
 
 **Windows users:** zstack works on Windows 11 via Git Bash or WSL. Node.js is required in addition to Bun — Bun has a known bug with Playwright's pipe transport on Windows ([bun#4253](https://github.com/oven-sh/bun/issues/4253)). The browse server automatically falls back to Node.js. Make sure both `bun` and `node` are on your PATH.
 

@@ -1,4 +1,5 @@
 import { describe, test, expect } from 'bun:test';
+import { canRevokeWrites } from '../../test/helpers/fs-caps';
 import { resolveConfig, ensureStateDir, readVersionHash, getGitRoot, getRemoteSlug, resolveZstackHome, resolveChromiumProfile, cleanSingletonLocks } from '../src/config';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -61,6 +62,39 @@ describe('config', () => {
       fs.rmSync(tmpDir, { recursive: true, force: true });
     });
 
+    test('writes a self-contained .zstack/.gitignore with * unconditionally', () => {
+      // Even with NO project .gitignore, the state dir must carry its own
+      // ignore so persisted cookies / network+audit logs can never be git-added.
+      const tmpDir = path.join(os.tmpdir(), `browse-selfignore-test-${Date.now()}`);
+      fs.mkdirSync(tmpDir, { recursive: true });
+      const config = resolveConfig({ BROWSE_STATE_FILE: path.join(tmpDir, '.zstack', 'browse.json') });
+      ensureStateDir(config);
+      const selfIgnore = path.join(config.stateDir, '.gitignore');
+      expect(fs.existsSync(selfIgnore)).toBe(true);
+      expect(fs.readFileSync(selfIgnore, 'utf-8')).toBe('*\n');
+      // No nesting: the ignore is directly inside the state dir, not .zstack/.zstack/.
+      expect(fs.existsSync(path.join(config.stateDir, '.zstack'))).toBe(false);
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    });
+
+    test('writes the self-contained .gitignore even when git already ignores .zstack/ (before the early return)', () => {
+      // Pins the load-bearing property: the state-dir ignore is written
+      // UNCONDITIONALLY, before the `if (isIgnoredByGit(...)) return` early exit.
+      // A git repo whose root .gitignore already lists .zstack/ makes
+      // isIgnoredByGit true, so the early return fires — moving the write below
+      // it (the exact bug the fix removed) would skip the guard here.
+      const tmpDir = path.join(os.tmpdir(), `browse-gitignored-repo-test-${Date.now()}`);
+      fs.mkdirSync(tmpDir, { recursive: true });
+      Bun.spawnSync(['git', 'init'], { cwd: tmpDir, stdout: 'ignore', stderr: 'ignore', timeout: 30_000 });
+      fs.writeFileSync(path.join(tmpDir, '.gitignore'), '.zstack/\n');
+      const config = resolveConfig({ BROWSE_STATE_FILE: path.join(tmpDir, '.zstack', 'browse.json') });
+      ensureStateDir(config);
+      const selfIgnore = path.join(config.stateDir, '.gitignore');
+      expect(fs.existsSync(selfIgnore)).toBe(true);
+      expect(fs.readFileSync(selfIgnore, 'utf-8')).toBe('*\n');
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    });
+
     test('adds .zstack/ to .gitignore if not present', () => {
       const tmpDir = path.join(os.tmpdir(), `browse-gitignore-test-${Date.now()}`);
       fs.mkdirSync(tmpDir, { recursive: true });
@@ -96,6 +130,7 @@ describe('config', () => {
     });
 
     test('logs warning to browse-server.log on non-ENOENT gitignore error', () => {
+      if (!canRevokeWrites()) return; // chmod is advisory here (win32, root, DAC-override containers)
       const tmpDir = path.join(os.tmpdir(), `browse-gitignore-test-${Date.now()}`);
       fs.mkdirSync(tmpDir, { recursive: true });
       // Create a read-only .gitignore (no .zstack/ entry → would try to append)
@@ -124,6 +159,41 @@ describe('config', () => {
       expect(fs.existsSync(path.join(tmpDir, '.gitignore'))).toBe(false);
       fs.rmSync(tmpDir, { recursive: true, force: true });
     });
+
+    test('leaves .gitignore alone when git already ignores .zstack/ globally', () => {
+      const { spawnSync } = require('child_process');
+      const tmpDir = path.join(os.tmpdir(), `browse-gitignore-global-${Date.now()}`);
+      fs.mkdirSync(tmpDir, { recursive: true });
+
+      // Set up a real git repo
+      spawnSync('git', ['init', '-q'], { cwd: tmpDir, timeout: 30_000 });
+      spawnSync('git', ['config', 'user.email', 'test@test.com'], { cwd: tmpDir, timeout: 30_000 });
+      spawnSync('git', ['config', 'user.name', 'Test'], { cwd: tmpDir, timeout: 30_000 });
+
+      // Write a global excludes file that ignores .zstack/
+      const excludesFile = path.join(tmpDir, 'global-gitignore');
+      fs.writeFileSync(excludesFile, '.zstack/\n');
+      spawnSync('git', ['config', 'core.excludesFile', excludesFile], { cwd: tmpDir, timeout: 30_000 });
+
+      // .gitignore exists but does NOT contain .zstack/
+      fs.writeFileSync(path.join(tmpDir, '.gitignore'), 'node_modules/\n');
+      spawnSync('git', ['add', '.gitignore'], { cwd: tmpDir, timeout: 30_000 });
+      spawnSync('git', ['commit', '-qm', 'init'], { cwd: tmpDir, timeout: 30_000 });
+
+      // Verify git knows .zstack/ is ignored
+      const check = spawnSync('git', ['check-ignore', '-q', '.zstack/'], { cwd: tmpDir, timeout: 30_000 });
+      expect(check.status).toBe(0);
+
+      const config = resolveConfig({ BROWSE_STATE_FILE: path.join(tmpDir, '.zstack', 'browse.json') });
+      ensureStateDir(config);
+
+      // .gitignore must NOT have been modified
+      const content = fs.readFileSync(path.join(tmpDir, '.gitignore'), 'utf-8');
+      expect(content).toBe('node_modules/\n');
+      expect(fs.existsSync(path.join(tmpDir, '.zstack'))).toBe(true);
+
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    });
   });
 
   describe('getRemoteSlug', () => {
@@ -136,24 +206,24 @@ describe('config', () => {
 
     test('parses SSH remote URLs', () => {
       // Test the regex directly since we can't mock Bun.spawnSync easily
-      const url = 'git@github.com:zeid/zstack.git';
+      const url = 'git@github.com:ZeidMahmoud/zstack.git';
       const match = url.match(/[:/]([^/]+)\/([^/]+?)(?:\.git)?$/);
       expect(match).not.toBeNull();
-      expect(`${match![1]}-${match![2]}`).toBe('zeid-zstack');
+      expect(`${match![1]}-${match![2]}`).toBe('garrytan-zstack');
     });
 
     test('parses HTTPS remote URLs', () => {
-      const url = 'https://github.com/zeid/zstack.git';
+      const url = 'https://github.com/ZeidMahmoud/zstack.git';
       const match = url.match(/[:/]([^/]+)\/([^/]+?)(?:\.git)?$/);
       expect(match).not.toBeNull();
-      expect(`${match![1]}-${match![2]}`).toBe('zeid-zstack');
+      expect(`${match![1]}-${match![2]}`).toBe('garrytan-zstack');
     });
 
     test('parses HTTPS remote URLs without .git suffix', () => {
-      const url = 'https://github.com/zeid/zstack';
+      const url = 'https://github.com/ZeidMahmoud/zstack';
       const match = url.match(/[:/]([^/]+)\/([^/]+?)(?:\.git)?$/);
       expect(match).not.toBeNull();
-      expect(`${match![1]}-${match![2]}`).toBe('zeid-zstack');
+      expect(`${match![1]}-${match![2]}`).toBe('garrytan-zstack');
     });
   });
 

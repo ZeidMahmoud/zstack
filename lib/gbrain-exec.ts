@@ -21,10 +21,12 @@
  *      spawn. This is the central bug the helper exists to prevent
  *      regressing on.
  *
- *   3. **`GBRAIN_HOME` honored consistently.** Other zstack helpers
- *      (`detectEngineTier`) already honor `GBRAIN_HOME`. `buildGbrainEnv`
- *      reads from `${GBRAIN_HOME:-$HOME/.gbrain}/config.json` so all
- *      zstack-side gbrain calls agree on which config file matters.
+ *   3. **`GBRAIN_HOME` honored consistently — with gbrain's own semantics
+ *      (#2521).** gbrain's configDir() treats `GBRAIN_HOME` as a PARENT
+ *      directory and always appends `.gbrain` itself (GBRAIN_HOME=/tmp/x
+ *      → /tmp/x/.gbrain/config.json). Every zstack-side read goes through
+ *      `gbrainConfigDir()` below so zstack and gbrain agree on which
+ *      config file matters.
  *
  * **Escape hatch:** `ZSTACK_RESPECT_ENV_DATABASE_URL=1` returns the
  * caller's env unchanged. Use only when the brain intentionally lives in
@@ -58,10 +60,10 @@ export interface BuildGbrainEnvOptions {
  * Detect whether a DATABASE_URL targets a PgBouncer transaction-mode pooler.
  *
  * Supabase transaction-mode poolers conventionally run on port 6543 at
- * `*.pooler.supabase.com`. When gbrain connects through one of these, it
- * auto-disables prepared statements — but search requires them (#1435).
- * Returns `true` when the URL looks like a transaction-mode pooler so the
- * caller can set `GBRAIN_PREPARE=true` to re-enable prepared statements.
+ * `*.pooler.supabase.com`. gbrain auto-disables prepared statements on these
+ * (prepared statements break under transaction pooling — #1965); its banner
+ * documents `GBRAIN_PREPARE=true` as the override for poolers that actually
+ * run in session mode on 6543.
  */
 export function isTransactionModePooler(url: string): boolean {
   try {
@@ -75,18 +77,32 @@ export function isTransactionModePooler(url: string): boolean {
 }
 
 /**
- * Build an env dict with DATABASE_URL seeded from
- * `${GBRAIN_HOME:-$HOME/.gbrain}/config.json`. Returns the base env
+ * gbrain's config directory, matching gbrain's own configDir() contract
+ * (#2521): `GBRAIN_HOME` is a PARENT directory — gbrain always appends
+ * `.gbrain` itself, so GBRAIN_HOME=/tmp/x reads /tmp/x/.gbrain/config.json.
+ * Unset → ~/.gbrain. Every zstack-side gbrain-config read MUST resolve
+ * through this helper, or zstack classifies engine status from a file
+ * gbrain never reads.
+ */
+export function gbrainConfigDir(env: NodeJS.ProcessEnv = process.env): string {
+  if (env.GBRAIN_HOME) return join(env.GBRAIN_HOME, ".gbrain");
+  return join(env.HOME || homedir(), ".gbrain");
+}
+
+/**
+ * Build an env dict with DATABASE_URL seeded from gbrain's config.json
+ * (resolved via `gbrainConfigDir`). Returns the base env
  * unchanged when:
  *   - `ZSTACK_RESPECT_ENV_DATABASE_URL=1` (intentional opt-out),
  *   - the config file is missing or unparseable,
  *   - the config has no `database_url`,
  *   - the caller already set DATABASE_URL to the same value.
  *
- * When the effective DATABASE_URL targets a PgBouncer transaction-mode
- * pooler (port 6543), sets `GBRAIN_PREPARE=true` so gbrain re-enables
- * prepared statements needed for search (#1435). Caller can override
- * with `GBRAIN_PREPARE=false` in the base env.
+ * GBRAIN_PREPARE is never set here (#1965): gbrain auto-disables prepared
+ * statements on transaction-mode poolers itself, and forcing them on breaks
+ * every write with "prepared statement does not exist". A caller-set
+ * GBRAIN_PREPARE (either value) passes through untouched — that remains the
+ * documented override for session-mode poolers on port 6543.
  *
  * Always returns a fresh object — mutating the returned env never
  * affects the caller's env. Tests assert on effective values, not
@@ -97,9 +113,7 @@ export function buildGbrainEnv(opts: BuildGbrainEnvOptions = {}): NodeJS.Process
   const out: NodeJS.ProcessEnv = { ...baseEnv };
   if (baseEnv.ZSTACK_RESPECT_ENV_DATABASE_URL === "1") return out;
 
-  const homeBase = baseEnv.HOME || homedir();
-  const gbrainHome = baseEnv.GBRAIN_HOME || join(homeBase, ".gbrain");
-  const configPath = join(gbrainHome, "config.json");
+  const configPath = join(gbrainConfigDir(baseEnv), "config.json");
   if (!existsSync(configPath)) return out;
 
   let cfg: GbrainConfig = {};
@@ -120,20 +134,6 @@ export function buildGbrainEnv(opts: BuildGbrainEnvOptions = {}): NodeJS.Process
     }
   }
 
-  // PgBouncer transaction-mode pooler detection (#1435): when the effective
-  // DATABASE_URL targets port 6543 (Supabase transaction-mode convention),
-  // gbrain auto-disables prepared statements — but search needs them.
-  // Set GBRAIN_PREPARE=true unless the caller explicitly opted out.
-  const effectiveUrl = out.DATABASE_URL || cfg.database_url;
-  if (effectiveUrl && !out.GBRAIN_PREPARE && isTransactionModePooler(effectiveUrl)) {
-    out.GBRAIN_PREPARE = "true";
-    if (opts.announce) {
-      process.stderr.write(
-        `[gbrain-exec] set GBRAIN_PREPARE=true (port 6543 transaction-mode pooler detected)\n`,
-      );
-    }
-  }
-
   return out;
 }
 
@@ -148,6 +148,106 @@ export function buildGbrainEnv(opts: BuildGbrainEnvOptions = {}): NodeJS.Process
  * spawn carries it.
  */
 export const NEEDS_SHELL_ON_WINDOWS = process.platform === "win32";
+
+/**
+ * Did an execFileSync/spawnSync failure come from the TIMEOUT budget (child
+ * killed) rather than the child itself failing? execFileSync kills the child
+ * when the budget runs out: `killed` with a SIGTERM on POSIX, ETIMEDOUT on
+ * runtimes that surface errno instead. Shared by the gbrain version probe,
+ * the engine classifier, and the gitleaks probe so the three sites can't
+ * drift on which shapes count as "slow, not broken".
+ */
+export function isExecTimeout(err: unknown): boolean {
+  const e = err as { killed?: boolean; signal?: string; code?: unknown };
+  return e?.killed === true || e?.signal === "SIGTERM" || e?.code === "ETIMEDOUT";
+}
+
+/** Where Git for Windows puts bash, most-specific first. */
+const WINDOWS_BASH_CANDIDATES = [
+  "C:\\Program Files\\Git\\bin\\bash.exe",
+  "C:\\Program Files\\Git\\usr\\bin\\bash.exe",
+  "C:\\Program Files (x86)\\Git\\bin\\bash.exe",
+];
+
+export interface ScriptInvocation {
+  cmd: string;
+  argv: string[];
+  /** Always false: we resolve the interpreter ourselves rather than via cmd.exe. */
+  shell: false;
+}
+
+/**
+ * How to invoke a **bash shebang script** (`zstack-brain-sync`) on this platform.
+ *
+ * POSIX execs it directly — the shebang does the work. Windows cannot, and
+ * `shell: true` does NOT rescue it: that routes through cmd.exe, which resolves
+ * `.cmd`/`.bat` via PATHEXT but has no concept of a shebang, so an
+ * extension-less bash script comes back as *"is not recognized as an internal
+ * or external command"*. This is why #1731's `shell: NEEDS_SHELL_ON_WINDOWS`
+ * fix genuinely cured the `gbrain.cmd` shim while leaving the brain-sync stage
+ * failing on **every** run on Windows. The two cases look identical and are not:
+ * a `.cmd` shim needs a shell, a shebang script needs an interpreter.
+ *
+ * The consequence was quiet rather than loud. `artifacts_sync_mode` defaults to
+ * pushing curated artifacts to git, so a Windows user's learnings accumulated in
+ * `~/.zstack` and were never committed, while `/sync-gbrain` printed one red
+ * line among four green ones.
+ *
+ * Git for Windows' bash is preferred over a bare `bash` on PATH because
+ * WindowsApps ships a `bash.exe` that is the WSL launcher; if it wins PATH
+ * order it interprets `C:\...` as a Linux path and the script never sees the
+ * repo. `ZSTACK_BASH` overrides everything for unusual installs.
+ *
+ * Returns `null` when no bash can be found, so the caller can say so plainly
+ * instead of surfacing a spawn error nobody can act on.
+ */
+export function bashScriptInvocation(
+  scriptPath: string,
+  args: string[],
+  opts: { platform?: string; exists?: (p: string) => boolean; env?: NodeJS.ProcessEnv } = {},
+): ScriptInvocation | null {
+  const platform = opts.platform ?? process.platform;
+  if (platform !== "win32") return { cmd: scriptPath, argv: args, shell: false };
+
+  const exists = opts.exists ?? existsSync;
+  const env = opts.env ?? process.env;
+
+  const override = env.ZSTACK_BASH?.trim();
+  const candidates = [...(override ? [override] : []), ...WINDOWS_BASH_CANDIDATES];
+  const bash = candidates.find((p) => exists(p));
+  if (!bash) return null;
+
+  // Forward slashes: bash treats backslashes as escapes, so a Windows path
+  // passed verbatim loses its separators.
+  return { cmd: bash, argv: [scriptPath.replace(/\\/g, "/"), ...args], shell: false };
+}
+
+/**
+ * Quote one argument for cmd.exe's re-parse (#2471). With `shell: true` on
+ * Windows, Node/Bun JOIN the argv into a single cmd.exe string WITHOUT
+ * quoting, so any argument containing a space — the default
+ * `C:\Users\First Last\repo` home layout — splits into two arguments and the
+ * gbrain call silently targets the wrong path. Pass-through for the safe
+ * charset; everything else is double-quoted with embedded quotes doubled
+ * (cmd.exe's escape). POSIX callers never see this (shell is false there).
+ */
+export function windowsShellQuote(arg: string): string {
+  if (arg !== "" && /^[A-Za-z0-9_\-.:\\/=,@+]+$/.test(arg)) return arg;
+  return '"' + arg.replace(/"/g, '""') + '"';
+}
+
+/**
+ * The single seam for building a gbrain CLI invocation (#2471). Every
+ * spawnSync/execFileSync of the `gbrain` shim must construct its
+ * (cmd, argv, shell) triple here so the Windows quoting fix lives in exactly
+ * one place — a direct spawn of the literal "gbrain" string with a shell
+ * flag reopens the space-in-path split this exists to close.
+ */
+export function gbrainInvocation(args: string[]): { cmd: string; argv: string[]; shell: boolean } {
+  return NEEDS_SHELL_ON_WINDOWS
+    ? { cmd: "gbrain", argv: args.map(windowsShellQuote), shell: true }
+    : { cmd: "gbrain", argv: args, shell: false };
+}
 
 export interface SpawnGbrainOptions {
   /** Timeout in milliseconds. Defaults to 30s. */
@@ -172,13 +272,14 @@ export interface SpawnGbrainOptions {
  * `stderr` exactly as they would with `spawnSync` directly.
  */
 export function spawnGbrain(args: string[], opts: SpawnGbrainOptions = {}): SpawnSyncReturns<string> {
-  return spawnSync("gbrain", args, {
+  const inv = gbrainInvocation(args);
+  return spawnSync(inv.cmd, inv.argv, {
     encoding: "utf-8",
     timeout: opts.timeout ?? 30_000,
     cwd: opts.cwd,
     stdio: opts.stdio || ["ignore", "pipe", "pipe"],
     env: buildGbrainEnv({ baseEnv: opts.baseEnv, announce: opts.announce }),
-    shell: NEEDS_SHELL_ON_WINDOWS, // #1731: gbrain is a .cmd shim on Windows
+    shell: inv.shell, // #1731: gbrain is a .cmd shim on Windows (+#2471 quoting)
   });
 }
 
@@ -207,11 +308,12 @@ export function spawnGbrainAsync(
   args: string[],
   opts: { stdio?: SpawnOptions["stdio"]; cwd?: string; baseEnv?: NodeJS.ProcessEnv } = {},
 ): ChildProcess {
-  return spawn("gbrain", args, {
+  const inv = gbrainInvocation(args);
+  return spawn(inv.cmd, inv.argv, {
     stdio: opts.stdio || ["ignore", "pipe", "pipe"],
     cwd: opts.cwd,
     env: buildGbrainEnv({ baseEnv: opts.baseEnv, announce: false }),
-    shell: NEEDS_SHELL_ON_WINDOWS, // #1731: gbrain is a .cmd shim on Windows
+    shell: inv.shell, // #1731: gbrain is a .cmd shim on Windows (+#2471 quoting)
   });
 }
 
@@ -220,12 +322,13 @@ export function spawnGbrainAsync(
  * for callers that want to surface gbrain's stderr as the error message.
  */
 export function execGbrainText(args: string[], opts: SpawnGbrainOptions = {}): string {
-  return execFileSync("gbrain", args, {
+  const inv = gbrainInvocation(args);
+  return execFileSync(inv.cmd, inv.argv, {
     encoding: "utf-8",
     timeout: opts.timeout ?? 30_000,
     cwd: opts.cwd,
     stdio: opts.stdio || ["ignore", "pipe", "pipe"],
     env: buildGbrainEnv({ baseEnv: opts.baseEnv, announce: opts.announce }),
-    shell: NEEDS_SHELL_ON_WINDOWS, // #1731: gbrain is a .cmd shim on Windows
+    shell: inv.shell, // #1731: gbrain is a .cmd shim on Windows (+#2471 quoting)
   });
 }
