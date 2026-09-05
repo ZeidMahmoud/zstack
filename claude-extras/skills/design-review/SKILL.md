@@ -1,0 +1,1 @@
+/home/zeid/.claude/skills/gstack/design-review/SKILL.md

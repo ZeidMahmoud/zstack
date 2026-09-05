@@ -1,0 +1,1 @@
+/home/zeid/.claude/skills/gstack/health/SKILL.md
