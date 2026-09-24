@@ -73,7 +73,7 @@ cd ~/.claude/skills/zstack && ./setup --team
 ```
 
 Skills like /qa, /ship, /review, /investigate, and /browse become available after install.
-Use /browse for all web browsing. Use ~/.claude/skills/zstack/... for zstack file paths.'
+Use /browse for all web browsing (Aside first, the bundled zstack browser as fallback). Use ~/.claude/skills/zstack/... for zstack file paths.'
 else
   SNIPPET='## zstack (REQUIRED — global install)
 
@@ -100,7 +100,7 @@ If ZSTACK_MISSING: STOP. Do not proceed. Tell the user:
 Do not skip skills, ignore zstack errors, or work around missing zstack.
 
 Using zstack skills: After install, skills like /qa, /ship, /review, /investigate,
-and /browse are available. Use /browse for all web browsing.
+and /browse are available. Use /browse for all web browsing (Aside first, the bundled zstack browser as fallback).
 Use the resolved install path above for zstack file paths
 (default: ~/.claude/skills/zstack).'
 fi

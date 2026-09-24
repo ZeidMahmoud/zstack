@@ -32,8 +32,11 @@ import * as path from 'node:path';
 import {
   runPlanSkillCounting,
   engStep0Boundary,
+  engSetupAUQ,
+  engFirstReviewAUQ,
 } from './helpers/claude-pty-runner';
 import { FORCING_BATCHING_ENG } from './fixtures/forcing-finding-seeds';
+import { createEngBatchingIssueCounter } from './helpers/eng-seeded-coverage';
 
 const describeE2E = describeE2ETier('periodic');
 
@@ -59,15 +62,25 @@ describeE2E('/plan-eng-review multi-finding batching regression (periodic)', () 
       }
 
       try {
+        const findings = createEngBatchingIssueCounter(() => {
+          try {
+            const stat = fs.lstatSync(planPath);
+            return stat.isFile() && !stat.isSymbolicLink() ? fs.readFileSync(planPath, 'utf8') : '';
+          } catch (error) {
+            if ((error as NodeJS.ErrnoException).code === 'ENOENT') return '';
+            throw error;
+          }
+        }, engSetupAUQ);
         const obs = await runPlanSkillCounting({
           skillName: 'plan-eng-review',
           slashCommand: '/plan-eng-review',
           followUpPrompt,
+          permissionPlanPath: planPath,
           isLastStep0AUQ: engStep0Boundary,
+          isSetupAUQ: engSetupAUQ,
+          isFirstReviewAUQ: engFirstReviewAUQ,
+          isReviewAUQ: findings.isReviewAUQ,
           reviewCountCeiling: N + 3, // hard cap above floor + tolerance
-          // LIVE-REPO CWD: PTY session needs the repo cwd — zstack skill
-          // registry + hermetic pre-trusted dir (hermetic-env trustedDirs).
-          cwd: process.cwd(),
           timeoutMs: 1_500_000, // 25 min
           env: { QUESTION_TUNING: 'false', EXPLAIN_LEVEL: 'default' },
         });

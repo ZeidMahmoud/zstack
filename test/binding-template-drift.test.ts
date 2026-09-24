@@ -18,6 +18,30 @@ function rendered(rel: string): string {
 }
 
 describe('content-binding template drift', () => {
+  test('design-lite records outside coverage after the outside step in ship', () => {
+    const text = rendered('ship/sections/review-army.md');
+    const outside = text.indexOf('design voice**');
+    expect(outside).toBeGreaterThan(-1);
+    expect(text.indexOf('--finish DESIGN_START')).toBeGreaterThan(outside);
+    expect(text).toContain('Use the original DESIGN_START token');
+  });
+
+  test('ship eval selection scopes the Rails example below the project-native path', () => {
+    const text = rendered('ship/sections/tests.md');
+    const native = text.indexOf('**Project-native path:**');
+    const rails = text.indexOf('**Rails example only');
+    expect(native).toBeGreaterThan(-1);
+    expect(rails).toBeGreaterThan(native);
+    expect(text).not.toContain('**If no matches:**');
+    expect(text).toContain('If any eval fails');
+  });
+
+  test('ship historical readiness does not replace the current pre-landing gate', () => {
+    const text = rendered('ship/SKILL.md');
+    expect(text).not.toContain('The only review that gates shipping');
+    expect(text).toContain('Step 9 remains mandatory');
+  });
+
   test('ship Step 16 carries the evidence check (mechanized IRON LAW)', () => {
     const ship = rendered('ship/SKILL.md');
     expect(ship).toMatch(/zstack-evidence check --label tests --expect-cmd '[^']+' --label vitest --expect-cmd '[^']+' --max-age 24 --allow-paths CHANGELOG\.md,VERSION,package\.json/);
@@ -61,10 +85,49 @@ describe('content-binding template drift', () => {
     expect(rendered('land-and-deploy/sections/readiness-gate.md')).toMatch(rowList);
   });
 
+  test('both grading surfaces reject missing capture instead of falling back to HEAD', () => {
+    for (const file of ['ship/SKILL.md', 'land-and-deploy/sections/readiness-gate.md']) {
+      const text = rendered(file);
+      expect(text).toContain('review_freshness');
+      expect(text).toContain('UNVERIFIED');
+      expect(text).toContain('Never fall back');
+      expect(text).toContain('0 commits');
+      expect(text.toLowerCase()).toContain('plan-tier');
+    }
+  });
+
+  test('diff callers capture before reading and consume the original token', () => {
+    const review = rendered('review/SKILL.md');
+    expect(review).toContain('zstack-review-log --start review\ngit diff "$DIFF_BASE"');
+    expect(review).toContain('--finish REVIEW_START');
+    expect(review).toContain('"completed":COMPLETED,"converged":CONVERGED,"cycles":CYCLES');
+    const army = rendered('ship/sections/review-army.md');
+    expect(army.indexOf('zstack-review-log --start review')).toBeLessThan(army.indexOf('run `git diff origin/<base>`'));
+    expect(army).toContain('--finish REVIEW_START');
+    expect(army).toContain('persist item 6 below with `converged:false`');
+    expect(army).toContain('--start design-review-lite');
+    expect(army).toContain('--finish DESIGN_START');
+    const codex = rendered('codex/sections/review-mode.md');
+    const starts = [...codex.matchAll(/zstack-review-log --start codex-review/g)];
+    expect(starts).toHaveLength(2);
+    expect(starts[0].index).toBeLessThan(codex.indexOf('_zstack_codex_timeout_wrapper 330 codex review'));
+    expect(starts[1].index).toBeLessThan(codex.indexOf('git diff "<base>...HEAD"'));
+    expect(codex).toContain('--finish CODEX_REVIEW_START');
+    expect(codex).toContain('"completed":COMPLETED,"converged":CONVERGED');
+    expect(codex).toContain('Fixes stay stale until a genuine rerun');
+    for (const skill of ['ship', 'review']) {
+      const adversarial = rendered(`${skill}/sections/adversarial.md`);
+      expect(adversarial).toContain('--start adversarial-review');
+      expect(adversarial).toContain('--finish PASS_START');
+      expect(adversarial).toContain('Each outside adversarial/structured pass');
+      expect(adversarial).toContain('Each token is consumed once');
+    }
+  });
+
   test('release-body write side carries the banner tripwire (and it actually fires)', () => {
     const body = rendered('document-release/sections/release-body.md');
-    expect(body).toContain('grep -c "UNTRUSTED TRACKER CONTENT" /tmp/zstack-pr-body-$$.md');
-    expect(body).toContain('grep -c "UNTRUSTED TRACKER CONTENT" /tmp/zstack-pr-body-orig-$$.md');
+    expect(body).toContain('grep -c "UNTRUSTED TRACKER CONTENT" "<run-dir>/body.md"');
+    expect(body).toContain('grep -c "UNTRUSTED TRACKER CONTENT" "<run-dir>/body-original.md"');
     // The fail-open shape: grep -c prints 0 AND exits 1 on no-match, so an
     // `|| echo 0` double-emits and breaks the -gt into the clean branch.
     expect(body).not.toContain('|| echo 0');
@@ -94,8 +157,8 @@ describe('content-binding template drift', () => {
         fs.writeFileSync(path.join(dir, 'orig.md'), origContent);
         fs.writeFileSync(path.join(dir, 'new.md'), newContent);
         return block![0]
-          .replaceAll('/tmp/zstack-pr-body-orig-$$.md', path.join(dir, 'orig.md'))
-          .replaceAll('/tmp/zstack-pr-body-$$.md', path.join(dir, 'new.md'));
+          .replaceAll('<run-dir>/body-original.md', path.join(dir, 'orig.md'))
+          .replaceAll('<run-dir>/body.md', path.join(dir, 'new.md'));
       };
 
       // Banner leaked into the outgoing body → the ABORT branch fires, loudly.

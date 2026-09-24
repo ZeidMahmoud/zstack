@@ -20,6 +20,7 @@ describeE2E('/plan-ceo-review AskUserQuestion floor (gate)', () => {
         skillName: 'plan-ceo-review',
         slashCommand: '/plan-ceo-review',
         followUpPrompt: FORCING_FLOOR_CEO,
+        requestedPlanPath: '/tmp/zstack-test-plan-ceo-floor.md',
         // LIVE-REPO CWD: PTY session needs the repo cwd — zstack skill
         // registry + hermetic pre-trusted dir (hermetic-env trustedDirs).
         cwd: process.cwd(),

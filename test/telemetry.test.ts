@@ -7,13 +7,27 @@ import * as os from 'os';
 const ROOT = path.resolve(import.meta.dir, '..');
 const BIN = path.join(ROOT, 'bin');
 
-// Each test gets a fresh temp directory for ZSTACK_STATE_DIR
+// Each test owns its state and HTTP transport. The real logger backgrounds
+// sync while retaining stdout, so execSync also waits for that transport.
+// Letting it reach the configured backend made a slow curl exceed our 10s
+// command timeout before the local marker assertions could run.
 let tmpDir: string;
+const FIXTURE_SUPABASE_URL = 'https://telemetry.fixture.invalid';
 
 function run(cmd: string, env: Record<string, string> = {}): string {
   return execSync(cmd, {
     cwd: ROOT,
-    env: { ...process.env, ZSTACK_STATE_DIR: tmpDir, ZSTACK_DIR: ROOT, ...env },
+    env: {
+      ...process.env,
+      HOME: path.join(tmpDir, 'home'),
+      ZSTACK_STATE_DIR: tmpDir, ZSTACK_STATE_ROOT: tmpDir, ZSTACK_HOME: tmpDir,
+      ZSTACK_DIR: ROOT, ZSTACK_SUPABASE_URL: FIXTURE_SUPABASE_URL,
+      ZSTACK_SUPABASE_ANON_KEY: 'fixture-anon-key',
+      ZSTACK_TEST_CURL_ARGS: path.join(tmpDir, 'curl-args'),
+      ...env,
+      // Preserve per-case bun stubs while keeping curl isolated in every case.
+      PATH: `${path.join(tmpDir, 'bin')}:${env.PATH ?? process.env.PATH ?? ''}`,
+    },
     encoding: 'utf-8',
     timeout: 10000,
   }).trim();
@@ -33,8 +47,38 @@ function parseJsonl(): any[] {
   return readJsonl().map(line => JSON.parse(line));
 }
 
+function curlRequests(): string[][] {
+  const file = path.join(tmpDir, 'curl-args');
+  if (!fs.existsSync(file)) return [];
+  return fs.readFileSync(file, 'utf8').split('\0\0').filter(Boolean).map(call => call.split('\0'));
+}
+
+function unconfiguredRoot(): string {
+  const fixture = path.join(tmpDir, 'unconfigured');
+  fs.mkdirSync(path.join(fixture, 'bin'), { recursive: true });
+  fs.copyFileSync(path.join(BIN, 'zstack-egress-lib.sh'), path.join(fixture, 'bin', 'zstack-egress-lib.sh'));
+  return fixture;
+}
+
 beforeEach(() => {
   tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'zstack-tel-'));
+  fs.mkdirSync(path.join(tmpDir, 'home'));
+  fs.mkdirSync(path.join(tmpDir, 'bin'));
+  fs.writeFileSync(path.join(tmpDir, 'bin', 'curl'), `#!/bin/sh
+printf '%s\\0' "$@" >> "$ZSTACK_TEST_CURL_ARGS"
+printf '\\0' >> "$ZSTACK_TEST_CURL_ARGS"
+fixture_output=''
+fixture_body='{"inserted":1}'
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    -o) shift; fixture_output="$1" ;;
+    */functions/v1/community-pulse) fixture_body='{"status":"ok","weekly_active":7,"change_pct":0,"top_skills":[],"crashes":[],"versions":[]}' ;;
+  esac
+  shift
+done
+[ -z "$fixture_output" ] || printf '%s' "$fixture_body" > "$fixture_output"
+printf '200'
+`, { mode: 0o755 });
 });
 
 afterEach(() => {
@@ -56,6 +100,11 @@ describe('zstack-telemetry-log', () => {
     expect(events[0].event_type).toBe('skill_run');
     expect(events[0].os).toBeTruthy();
     expect(events[0].zstack_version).toBeTruthy();
+    const requests = curlRequests();
+    expect(requests).toHaveLength(1);
+    expect(requests[0]).toContain(`${FIXTURE_SUPABASE_URL}/functions/v1/telemetry-ingest`);
+    expect(requests[0]).toContain('apikey: fixture-anon-key');
+    expect(requests[0][requests[0].indexOf('-X') + 1]).toBe('POST');
   });
 
   test('produces no output when tier=off', () => {
@@ -272,13 +321,9 @@ describe('zstack-telemetry-log', () => {
     expect(events[0].error_message.length).toBeLessThanOrEqual(200);
   });
 
-  test('fails closed: error_message becomes null when the engine cannot relocate a span (#1947)', () => {
+  test('redacts an anchored error_message value at its original offset (#1947, #2930)', () => {
     setConfig('telemetry', 'anonymous');
     const secret = '8Fk2pQ9vXz4wL7mN3rT6yB1cD5eG0hJq';
-    // env.kv-shaped finding (line-anchored, so the assignment leads the
-    // message): the span (value) starts past the regex match start,
-    // locateSpan misses it, redactFindingSpans returns null — the bin must
-    // drop the whole message, never pass it through raw.
     run(
       `${BIN}/zstack-telemetry-log --skill qa --duration 10 --outcome error --error-message 'API_KEY=${secret} rejected by daemon' --session-id red-4`,
     );
@@ -286,7 +331,7 @@ describe('zstack-telemetry-log', () => {
     const lines = readJsonl();
     expect(lines).toHaveLength(1);
     const event = JSON.parse(lines[0]);
-    expect(event.error_message).toBeNull();
+    expect(event.error_message).toBe('API_KEY=<REDACTED-env.kv> rejected by daemon');
     expect(lines[0]).not.toContain(secret);
   });
 
@@ -332,6 +377,20 @@ describe('zstack-telemetry-log', () => {
 });
 
 describe('.pending marker', () => {
+  test('--no-sweep (one-shot setup events) leaves other sessions\' in-flight markers untouched', () => {
+    setConfig('telemetry', 'anonymous');
+    const analyticsDir = path.join(tmpDir, 'analytics');
+    fs.mkdirSync(analyticsDir, { recursive: true });
+    const marker = path.join(analyticsDir, '.pending-live-456');
+    fs.writeFileSync(marker, '{"skill":"ship","ts":"2026-09-04T00:00:00Z","session_id":"live-456","zstack_version":"1.79.0.0"}');
+    run(`${BIN}/zstack-telemetry-log --event-type onboarding --skill _setup_playwright --outcome chromium-install --no-sweep`);
+    expect(fs.existsSync(marker)).toBe(true);
+    const events = parseJsonl();
+    expect(events).toHaveLength(1);
+    expect(events[0].event_type).toBe('onboarding');
+    expect(events[0].outcome).toBe('chromium-install');
+  });
+
   test('finalizes stale .pending from another session as outcome:unknown', () => {
     setConfig('telemetry', 'anonymous');
 
@@ -438,9 +497,11 @@ describe('zstack-analytics', () => {
 
 describe('zstack-telemetry-sync', () => {
   test('exits silently with no Supabase URL configured', () => {
-    // Default: ZSTACK_SUPABASE_URL is not set → exit 0
-    const result = run(`${BIN}/zstack-telemetry-sync`);
+    const result = run(`${BIN}/zstack-telemetry-sync`, {
+      ZSTACK_DIR: unconfiguredRoot(), ZSTACK_SUPABASE_URL: '', ZSTACK_SUPABASE_ANON_KEY: '',
+    });
     expect(result).toBe('');
+    expect(curlRequests()).toEqual([]);
   });
 
   test('exits silently with no JSONL file', () => {
@@ -469,7 +530,7 @@ describe('zstack-community-dashboard', () => {
   test('shows unconfigured message when no Supabase config available', () => {
     // Use a fake ZSTACK_DIR with no supabase/config.sh
     const output = run(`${BIN}/zstack-community-dashboard`, {
-      ZSTACK_DIR: tmpDir,
+      ZSTACK_DIR: unconfiguredRoot(),
       ZSTACK_SUPABASE_URL: '',
       ZSTACK_SUPABASE_ANON_KEY: '',
     });
@@ -477,12 +538,15 @@ describe('zstack-community-dashboard', () => {
     expect(output).toContain('zstack-analytics');
   });
 
-  test('connects to Supabase when config exists', () => {
-    // Use the real ZSTACK_DIR which has supabase/config.sh
+  test('requests configured community stats through the isolated transport', () => {
     const output = run(`${BIN}/zstack-community-dashboard`);
     expect(output).toContain('zstack community dashboard');
-    // Should not show "not configured" since config.sh exists
     expect(output).not.toContain('Supabase not configured');
+    expect(output).toContain('Weekly active installs: 7');
+    const requests = curlRequests();
+    expect(requests).toHaveLength(1);
+    expect(requests[0]).toContain(`${FIXTURE_SUPABASE_URL}/functions/v1/community-pulse`);
+    expect(requests[0]).toContain('apikey: fixture-anon-key');
   });
 });
 

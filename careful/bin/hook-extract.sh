@@ -63,10 +63,39 @@ zstack_hook_decision() {
   printf '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"%s","permissionDecisionReason":%s}}\n' "$_ghd_decision" "$_ghd_encoded"
 }
 
+# zstack_hook_state_root
+#   Print the zstack state root, resolved with EXACTLY the chain bin/zstack-paths
+#   uses (ZSTACK_STATE_ROOT): ZSTACK_HOME, then CLAUDE_PLUGIN_DATA only when
+#   CLAUDE_PLUGIN_ROOT names zstack (a CLAUDE_PLUGIN_DATA leaked from another
+#   plugin via CLAUDE_ENV_FILE must not redirect our state), then $HOME/.zstack,
+#   then a project-local .zstack. Hooks run on every Edit/Bash call, so this is
+#   pure bash — never spawn zstack-paths from a hook. The writers (/freeze,
+#   /guard, /unfreeze, /investigate) resolve through zstack-paths; a reader that
+#   used a different chain failed OPEN whenever ZSTACK_HOME was set (#1459).
+#   test/hook-scripts.test.ts pins parity against zstack-paths.
+#   Printed WITHOUT a trailing newline: callers capture with a sentinel
+#   (`r="$(zstack_hook_state_root; printf x)"; r="${r%x}"`) so a root that
+#   itself ends in a newline round-trips exactly as zstack-paths' %q does —
+#   otherwise writer and reader would again disagree on the directory.
+zstack_hook_state_root() {
+  if [ -n "${ZSTACK_HOME:-}" ]; then
+    printf '%s' "$ZSTACK_HOME"
+  elif [ -n "${CLAUDE_PLUGIN_DATA:-}" ] && printf '%s' "${CLAUDE_PLUGIN_ROOT:-}" | grep -qi "zstack"; then
+    printf '%s' "$CLAUDE_PLUGIN_DATA"
+  elif [ -n "${HOME:-}" ]; then
+    printf '%s' "$HOME/.zstack"
+  else
+    printf '%s' ".zstack"
+  fi
+}
+
 # zstack_hook_log_fire SKILL PATTERN
 #   Append a hook_fire analytics record (pattern name only, never command
 #   content). Respects ZSTACK_HOME so tests never pollute the operator's real
-#   analytics file. Best-effort: failures never affect the hook decision.
+#   analytics file. Deliberately NOT zstack_hook_state_root: every other
+#   analytics writer and reader (zstack-skill-start, zstack-retro-metrics,
+#   zstack-analytics) uses this two-step chain, and the usage log must stay one
+#   file. Best-effort: failures never affect the hook decision.
 zstack_hook_log_fire() {
   _ghlf_dir="${ZSTACK_HOME:-$HOME/.zstack}/analytics"
   mkdir -p "$_ghlf_dir" 2>/dev/null || true

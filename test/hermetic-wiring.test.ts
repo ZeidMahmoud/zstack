@@ -145,8 +145,8 @@ describe('hermetic wiring tripwire', () => {
     // hermeticSkillsConfigDir() is a BLESSED non-hermetic edge: it registers
     // the LIVE repo tree's skills (the skills are the subject under test).
     // What it must never do is hand children the operator's ~/.claude — the
-    // seeded CLAUDE_CONFIG_DIR lives under the hermetic runRoot, and every
-    // registered symlink resolves into the repo checkout.
+    // seeded CLAUDE_CONFIG_DIR lives under the hermetic runRoot, while its
+    // registered documents link directly to the live checkout under test.
     const configDir = hermeticSkillsConfigDir();
     const { runRoot } = getHermeticDirs();
     const operatorClaude = path.join(os.homedir(), '.claude') + path.sep;
@@ -155,19 +155,28 @@ describe('hermetic wiring tripwire', () => {
     const skillsDir = path.join(configDir, 'skills');
     const repoRootReal = fs.realpathSync(ROOT) + path.sep;
     for (const entry of fs.readdirSync(skillsDir)) {
-      const target = fs.readlinkSync(path.join(skillsDir, entry, 'SKILL.md'));
-      const resolved = fs.realpathSync(target);
-      // Targets inside the live repo checkout are the blessed edge — exempt
-      // them BEFORE the operator-~/.claude ban. On the default global-git
-      // install the repo itself lives at ~/.claude/skills/zstack, so every
-      // CORRECT symlink carries the operatorClaude prefix and an unexempted
-      // ban can never pass (regression 2026-08-15: pristine v1.64.1.0 fails
-      // this test in any worktree under ~/.claude/skills/ and passes
-      // elsewhere — realpath both sides so a symlinked HOME can't dodge it).
-      if (!resolved.startsWith(repoRootReal)) {
-        expect(resolved.startsWith(operatorClaude), `${entry}: symlink escapes to ${target}`).toBe(false);
+      if (entry === 'zstack') {
+        const verifyRuntime = (directory: string) => {
+          expect(fs.lstatSync(directory).isDirectory()).toBe(true);
+          for (const name of fs.readdirSync(directory)) {
+            const file = path.join(directory, name);
+            if (fs.statSync(file).isDirectory()) verifyRuntime(file);
+            else {
+              expect(fs.lstatSync(file).isSymbolicLink()).toBe(true);
+              expect(fs.realpathSync(file).startsWith(repoRootReal), file).toBe(true);
+            }
+          }
+        };
+        verifyRuntime(path.join(skillsDir, entry));
+        continue;
       }
-      expect(resolved.startsWith(repoRootReal), `${entry}: symlink outside repo: ${target}`).toBe(true);
+      const link = path.join(skillsDir, entry, 'SKILL.md');
+      expect(fs.lstatSync(path.dirname(link)).isDirectory()).toBe(true);
+      expect(fs.lstatSync(link).isSymbolicLink()).toBe(true);
+      const target = fs.readlinkSync(link);
+      const resolved = fs.realpathSync(link);
+      expect(resolved.startsWith(operatorClaude), `${entry}: symlink escapes to ${target}`).toBe(false);
+      expect(resolved.startsWith(repoRootReal), `${entry}: symlink outside checkout: ${target}`).toBe(true);
     }
   });
 });

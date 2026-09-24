@@ -35,7 +35,8 @@ import {
 } from '@anthropic-ai/claude-agent-sdk';
 import * as fs from 'fs';
 import * as path from 'path';
-import { resolveClaudeBinary as resolveClaudeBinaryShared } from '../../browse/src/claude-bin';
+import { resolveClaudeBinary as resolveClaudeBinaryShared } from '../../lib/claude-bin';
+import { resolveEvalModel } from '../../lib/eval-model';
 import { hermeticChildEnv } from './hermetic-env';
 import type { SkillTestResult } from './session-runner';
 
@@ -105,6 +106,8 @@ export interface RunAgentSdkOptions {
   runId?: string;
   fixtureId?: string;
   queryProvider?: QueryProvider;
+  /** Cancel queueing, SDK work and retries under the caller's case deadline. */
+  signal?: AbortSignal;
   /** Max 429 retries per call. Default 3. */
   maxRetries?: number;
   /**
@@ -179,12 +182,22 @@ class Semaphore {
   constructor(capacity: number) {
     this.available = capacity;
   }
-  async acquire(): Promise<void> {
+  async acquire(signal?: AbortSignal): Promise<void> {
+    signal?.throwIfAborted();
     if (this.available > 0) {
       this.available--;
       return;
     }
-    await new Promise<void>((resolve) => this.queue.push(resolve));
+    await new Promise<void>((resolve, reject) => {
+      const grant = () => { signal?.removeEventListener('abort', abort); resolve(); };
+      const abort = () => {
+        const index = this.queue.indexOf(grant);
+        if (index >= 0) this.queue.splice(index, 1);
+        reject(signal?.reason ?? new Error('SDK query aborted while queued'));
+      };
+      this.queue.push(grant);
+      signal?.addEventListener('abort', abort, { once: true });
+    });
   }
   release(): void {
     const next = this.queue.shift();
@@ -299,10 +312,9 @@ export async function runAgentSdkTest(
   const sem = getApiSemaphore();
   const maxRetries = opts.maxRetries ?? 3;
   const queryImpl: QueryProvider = opts.queryProvider ?? query;
-  // Default matches session-runner's Sonnet (D1a, 2026-08): the old Opus
-  // default was an inconsistency between the two runners, not a choice —
-  // tests that need Opus pin it via opts.model (30+ already do).
-  const model = opts.model ?? 'claude-sonnet-4-6';
+  // Default matches session-runner's frontier eval fallback. Tests that need a
+  // cheaper or historical model pin it via opts.model or EVALS_MODEL.
+  const model = opts.model ?? process.env.EVALS_MODEL ?? resolveEvalModel('capture');
 
   // NOTE on env: the SDK child gets the COMPLETE hermetic env (allowlist
   // scrub + ANTHROPIC_API_KEY + hermetic CLAUDE_CONFIG_DIR/ZSTACK_HOME), with
@@ -320,8 +332,15 @@ export async function runAgentSdkTest(
   let lastErr: unknown = null;
 
   while (attempt <= maxRetries) {
-    await sem.acquire();
+    await sem.acquire(opts.signal);
     const startMs = Date.now();
+    const controller = new AbortController();
+    let activeQuery: ReturnType<QueryProvider> | undefined;
+    const abort = () => {
+      controller.abort(opts.signal?.reason);
+      try { activeQuery?.close(); } catch { /* cancellation remains authoritative */ }
+    };
+    opts.signal?.addEventListener('abort', abort, { once: true });
 
     // Hoisted so the max-turns catch branch can synthesize a result from
     // whatever we captured before the SDK threw.
@@ -335,8 +354,28 @@ export async function runAgentSdkTest(
     let systemInitVersion = 'unknown';
     let rateLimited: unknown = null;
     let terminalResult: SDKResultMessage | null = null;
+    // A generator can emit its terminal result and then throw. Keep its
+    // authoritative usage in both paths, while preserving the caller's outcome.
+    const finishResult = (exitReason: string): AgentSdkResult => ({
+      events,
+      assistantTurns,
+      toolCalls,
+      output: assistantTextParts.join('\n'),
+      exitReason,
+      turnsUsed: terminalResult?.num_turns ?? assistantTurns.length,
+      durationMs: Date.now() - startMs,
+      firstResponseMs,
+      maxInterTurnMs,
+      costUsd: terminalResult?.total_cost_usd ?? 0, // Unknown only when no usage was returned.
+      model,
+      sdkVersion: resolveSdkVersion(),
+      sdkClaudeCodeVersion: systemInitVersion,
+      resolvedBinaryPath: opts.pathToClaudeCodeExecutable ?? 'sdk-default',
+      browseErrors: [],
+    });
 
     try {
+      opts.signal?.throwIfAborted();
       // When canUseTool is supplied, the SDK must route tool-use approval
       // decisions through the callback. bypassPermissions short-circuits
       // that. Flip to 'default' mode so canUseTool actually fires. Tests
@@ -356,6 +395,7 @@ export async function runAgentSdkTest(
           : baseTools;
 
       const sdkOpts: Options = {
+        abortController: controller,
         model,
         cwd: opts.workingDirectory,
         maxTurns: opts.maxTurns ?? 5,
@@ -379,8 +419,12 @@ export async function runAgentSdkTest(
         prompt: opts.userPrompt,
         options: sdkOpts,
       });
+      activeQuery = q;
+      if (opts.signal?.aborted) abort();
+      opts.signal?.throwIfAborted();
 
       for await (const ev of q) {
+        opts.signal?.throwIfAborted();
         const now = Date.now();
         if (firstResponseMs === 0) firstResponseMs = now - startMs;
         const interTurn = now - lastEventMs;
@@ -431,6 +475,8 @@ export async function runAgentSdkTest(
         }
       }
 
+      opts.signal?.throwIfAborted();
+
       if (rateLimited) {
         throw rateLimited;
       }
@@ -438,60 +484,16 @@ export async function runAgentSdkTest(
         throw new Error('query stream ended without a result event');
       }
 
-      const durationMs = Date.now() - startMs;
-      const costUsd =
-        (terminalResult as { total_cost_usd?: number }).total_cost_usd ?? 0;
-      const turnsUsed =
-        (terminalResult as { num_turns?: number }).num_turns ??
-        assistantTurns.length;
-      const exitReason =
-        (terminalResult as { subtype?: string }).subtype ?? 'unknown';
-
-      return {
-        events,
-        assistantTurns,
-        toolCalls,
-        output: assistantTextParts.join('\n'),
-        exitReason,
-        turnsUsed,
-        durationMs,
-        firstResponseMs,
-        maxInterTurnMs,
-        costUsd,
-        model,
-        sdkVersion: resolveSdkVersion(),
-        sdkClaudeCodeVersion: systemInitVersion,
-        resolvedBinaryPath: opts.pathToClaudeCodeExecutable ?? 'sdk-default',
-        browseErrors: [],
-      };
+      return finishResult(terminalResult.subtype ?? 'unknown');
     } catch (err) {
       lastErr = err;
+      opts.signal?.throwIfAborted();
 
-      // "Max turns reached" is the SDK's way of saying "this session ran
-      // out of turns." It's thrown from the generator instead of emitted
-      // as a result message. Treat as a successful-but-capped trial: the
-      // assistant turns we collected are real and carry a metric. Record
-      // them with exitReason='error_max_turns' rather than failing the
-      // whole run.
+      // Some SDK versions throw max-turns after emitting a terminal result;
+      // others throw without one. Preserve captured usage when present and
+      // keep error_max_turns even if an earlier terminal claimed success.
       if (isMaxTurnsError(err)) {
-        const durationMs = Date.now() - startMs;
-        return {
-          events,
-          assistantTurns,
-          toolCalls,
-          output: assistantTextParts.join('\n'),
-          exitReason: 'error_max_turns',
-          turnsUsed: assistantTurns.length,
-          durationMs,
-          firstResponseMs,
-          maxInterTurnMs,
-          costUsd: 0, // unknown from thrown-error path
-          model,
-          sdkVersion: resolveSdkVersion(),
-          sdkClaudeCodeVersion: systemInitVersion,
-          resolvedBinaryPath: opts.pathToClaudeCodeExecutable ?? 'sdk-default',
-          browseErrors: [],
-        };
+        return finishResult('error_max_turns');
       }
 
       const isRetryable = isRateLimitThrown(err);
@@ -503,13 +505,20 @@ export async function runAgentSdkTest(
       }
       attempt++;
       // backoff: 1s, 2s, 4s
-      await new Promise((r) => setTimeout(r, 1000 * Math.pow(2, attempt - 1)));
+      await new Promise<void>((resolve, reject) => {
+        const aborted = () => { clearTimeout(timer); reject(opts.signal?.reason ?? new Error('SDK retry aborted')); };
+        const timer = setTimeout(() => { opts.signal?.removeEventListener('abort', aborted); resolve(); }, 1000 * Math.pow(2, attempt - 1));
+        opts.signal?.addEventListener('abort', aborted, { once: true });
+        if (opts.signal?.aborted) aborted();
+      });
+      opts.signal?.throwIfAborted();
       // Let caller reset workspace since prior attempt may have partially
       // mutated files via Bash.
       if (opts.onRetry) {
         opts.onRetry(opts.workingDirectory);
       }
     } finally {
+      opts.signal?.removeEventListener('abort', abort);
       sem.release();
     }
   }

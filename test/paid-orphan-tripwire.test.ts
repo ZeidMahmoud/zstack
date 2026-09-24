@@ -31,6 +31,7 @@ const SCANNER_EXEMPT = new Map<string, string>([
   // Meta-tests that quote gate-pattern strings to test classification:
   ['test/helpers/e2e-gate.unit.test.ts', 'free unit test OF the gate predicates (env stubbed)'],
   ['test/paid-shards.test.ts', 'quotes tier-guard strings as classification fixtures'],
+  ['test/carve-section-sharding.test.ts', 'free registry census quotes tier guards to verify each paid wrapper'],
   ['test/evals-workflow-wiring.test.ts', 'pins the sliced-lane yml wiring (successor to the matrix test)'],
   ['test/e2e-tier-alignment.test.ts', 'parses tier guards to enforce alignment'],
   ['test/paid-orphan-tripwire.test.ts', 'this scanner'],
@@ -49,7 +50,9 @@ const GATE_PATTERNS = [
 function trackedTestFiles(): string[] {
   const out = spawnSync('git', ['ls-files', '*.test.ts'], { cwd: ROOT, encoding: 'utf-8', timeout: 30_000 });
   if (out.status !== 0) throw new Error(`git ls-files failed: ${out.stderr}`);
-  return out.stdout.split('\n').filter(Boolean);
+  // The index still lists a file deleted in the working tree until the
+  // deletion is staged; scan what is actually on disk.
+  return out.stdout.split('\n').filter((f) => f && fs.existsSync(path.join(ROOT, f)));
 }
 
 describe('paid orphan tripwire', () => {

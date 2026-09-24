@@ -1,4 +1,4 @@
-# zstack digest v1.79.0.0 — regenerate/re-copy after upgrading zstack
+# zstack digest v1.89.0.0 — regenerate/re-copy after upgrading zstack
 
 Behavioral rules from zstack (https://github.com/ZeidMahmoud/zstack), compressed
 for agent hosts without a full skill install. The full skills add workflows,

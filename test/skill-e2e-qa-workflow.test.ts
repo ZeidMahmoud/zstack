@@ -1,12 +1,14 @@
 import { describe, test, expect, beforeAll, afterAll } from 'bun:test';
 import { JUDGE_MS, CAPTURE_MS, CAPTURE_LONG_MS } from './helpers/eval-budgets';
-import { runSkillTest } from './helpers/session-runner';
+import { runSkillTest, SESSION_DRAIN_GRACE_MS } from './helpers/session-runner';
+import { resolveEvalModel } from '../lib/eval-model';
 import {
-  ROOT, browseBin, runId, evalsEnabled,
+  ROOT, browseBin, runId, evalsEnabled, selectedTests,
   describeIfSelected, testConcurrentIfSelected,
   copyDirSync, setupBrowseShims, logCost, recordE2E,
   createEvalCollector, finalizeEvalCollector,
 } from './helpers/e2e-helpers';
+import { asideAvailable } from './helpers/aside-available';
 import { startTestServer } from '../browse/test/test-server';
 import { spawnSync } from 'child_process';
 import * as fs from 'fs';
@@ -14,6 +16,18 @@ import * as path from 'path';
 import * as os from 'os';
 
 const evalCollector = createEvalCollector('e2e-qa-workflow');
+
+// /qa and /qa-only drive the Aside browser first and fall back to the zstack
+// browse binary. The browser-driving describes need one of the two — a live
+// Aside or a built browse/dist/browse (CI builds it, so the Linux lane runs
+// the fallback path). Neither → skip, never fail. qa-bootstrap opens no
+// browser and is not gated.
+const browserSelected = evalsEnabled && (asideAvailable() || fs.existsSync(browseBin)) ? selectedTests : [];
+
+// The skill's BROWSER SETUP decides Aside vs fallback; the prompt only tells the
+// agent where the fallback binary is (the hermetic HOME has no global install).
+const browserPrompt = (skillMd: string) =>
+  `Follow the BROWSER SETUP section in ${skillMd} exactly: it probes for Aside first and falls back to the zstack browse binary. If it falls back, the browse binary is at ${browseBin} (B="${browseBin}"; find-browse is shimmed under browse/bin in this directory). Do not look for any other browser.`;
 
 // --- B4: QA skill E2E ---
 
@@ -40,7 +54,7 @@ describeIfSelected('QA skill E2E', ['qa-quick'], () => {
 
   testConcurrentIfSelected('qa-quick', async () => {
     const result = await runSkillTest({
-      prompt: `B="${browseBin}"
+      prompt: `${browserPrompt('qa/SKILL.md')}
 
 The test server is already running at: ${testServer.url}
 Target page: ${testServer.url}/basic.html
@@ -71,7 +85,7 @@ Write your report to ${qaDir}/qa-reports/qa-report.md`,
     // Accept error_max_turns — the agent doing thorough QA work is not a failure
     expect(['success', 'error_max_turns']).toContain(result.exitReason);
   }, CAPTURE_MS);
-});
+}, browserSelected);
 
 // --- QA-Only E2E (report-only, no fixes) ---
 
@@ -112,9 +126,7 @@ describeIfSelected('QA-Only skill E2E', ['qa-only-no-fix'], () => {
 
   testConcurrentIfSelected('qa-only-no-fix', async () => {
     const result = await runSkillTest({
-      prompt: `IMPORTANT: The browse binary is already assigned below as B. Do NOT search for it or run the SKILL.md setup block — just use $B directly.
-
-B="${browseBin}"
+      prompt: `${browserPrompt('qa-only/SKILL.md')}
 
 Read the file qa-only/SKILL.md for the QA-only workflow instructions.
 Skip the preamble bash block, lake intro, telemetry, and contributor mode sections — go straight to the QA workflow.
@@ -158,23 +170,34 @@ Write your report to ${qaOnlyDir}/qa-reports/qa-only-report.md`,
     );
     expect(statusLines.filter((l: string) => l.startsWith(' M') || l.startsWith('M '))).toHaveLength(0);
   }, CAPTURE_MS);
-});
+}, browserSelected);
 
 // --- QA Fix Loop E2E ---
 
 describeIfSelected('QA Fix Loop E2E', ['qa-fix-loop'], () => {
-  let qaFixDir: string;
-  let qaFixServer: ReturnType<typeof Bun.serve> | null = null;
+  // Separate the existing process drain and recording from the work ceiling.
+  const finalizeMs = SESSION_DRAIN_GRACE_MS + 5_000;
+  testConcurrentIfSelected('qa-fix-loop', async () => {
+    const started = Date.now();
+    const remainingWorkMs = () => {
+      const remaining = started + CAPTURE_LONG_MS - Date.now();
+      if (remaining <= 0) throw new Error('QA fix-loop work budget exhausted');
+      return remaining;
+    };
+    const qaFixDir = fs.mkdtempSync(path.join(os.tmpdir(), 'skill-e2e-qa-fix-'));
+    let qaFixServer: ReturnType<typeof Bun.serve> | null = null;
+    let result: Awaited<ReturnType<typeof runSkillTest>> | undefined;
+    let passed = false;
+    let failure: unknown;
+    // Bun retries the body: each attempt owns fresh source, server and cleanup.
+    try {
+      setupBrowseShims(qaFixDir);
 
-  beforeAll(() => {
-    qaFixDir = fs.mkdtempSync(path.join(os.tmpdir(), 'skill-e2e-qa-fix-'));
-    setupBrowseShims(qaFixDir);
+      // Copy qa skill files
+      copyDirSync(path.join(ROOT, 'qa'), path.join(qaFixDir, 'qa'));
 
-    // Copy qa skill files
-    copyDirSync(path.join(ROOT, 'qa'), path.join(qaFixDir, 'qa'));
-
-    // Create a simple HTML page with obvious fixable bugs
-    fs.writeFileSync(path.join(qaFixDir, 'index.html'), `<!DOCTYPE html>
+      // Create a simple HTML page with obvious fixable bugs
+      fs.writeFileSync(path.join(qaFixDir, 'index.html'), `<!DOCTYPE html>
 <html lang="en">
 <head><meta charset="utf-8"><title>Test App</title></head>
 <body>
@@ -194,86 +217,112 @@ describeIfSelected('QA Fix Loop E2E', ['qa-fix-loop'], () => {
 </html>
 `);
 
-    // Init git repo with clean working tree
-    const run = (cmd: string, args: string[]) =>
-      spawnSync(cmd, args, { cwd: qaFixDir, stdio: 'pipe', timeout: 5000 });
+      // Init git repo with clean working tree
+      const run = (cmd: string, args: string[]) =>
+        spawnSync(cmd, args, { cwd: qaFixDir, stdio: 'pipe', timeout: 5000 });
 
-    run('git', ['init', '-b', 'main']);
-    run('git', ['config', 'user.email', 'test@test.com']);
-    run('git', ['config', 'user.name', 'Test']);
-    run('git', ['add', '.']);
-    run('git', ['commit', '-m', 'initial commit']);
+      run('git', ['init', '-b', 'main']);
+      run('git', ['config', 'user.email', 'test@test.com']);
+      run('git', ['config', 'user.name', 'Test']);
+      run('git', ['add', '.']);
+      run('git', ['commit', '-m', 'initial commit']);
 
-    // Start a local server serving from the working directory so fixes are reflected on refresh
-    qaFixServer = Bun.serve({
-      port: 0,
-      hostname: '127.0.0.1',
-      fetch(req) {
-        const url = new URL(req.url);
-        let filePath = url.pathname === '/' ? '/index.html' : url.pathname;
-        filePath = filePath.replace(/^\//, '');
-        const fullPath = path.join(qaFixDir, filePath);
-        if (!fs.existsSync(fullPath)) {
-          return new Response('Not Found', { status: 404 });
-        }
-        const content = fs.readFileSync(fullPath, 'utf-8');
-        return new Response(content, {
-          headers: { 'Content-Type': 'text/html' },
-        });
-      },
-    });
-  });
+      // Start a local server serving from the working directory so fixes are reflected on refresh
+      qaFixServer = Bun.serve({
+        port: 0,
+        hostname: '127.0.0.1',
+        fetch(req) {
+          const url = new URL(req.url);
+          let filePath = url.pathname === '/' ? '/index.html' : url.pathname;
+          filePath = filePath.replace(/^\//, '');
+          const fullPath = path.join(qaFixDir, filePath);
+          if (!fs.existsSync(fullPath) || !fs.statSync(fullPath).isFile()) {
+            return new Response('Not Found', { status: 404 });
+          }
+          const content = fs.readFileSync(fullPath, 'utf-8');
+          return new Response(content, {
+            headers: { 'Content-Type': 'text/html' },
+          });
+        },
+      });
 
-  afterAll(() => {
-    qaFixServer?.stop();
-    try { fs.rmSync(qaFixDir, { recursive: true, force: true }); } catch {}
-  });
+      const initial = spawnSync('git', ['rev-parse', 'HEAD'], { cwd: qaFixDir, stdio: 'pipe', timeout: 5000 });
+      if (initial.status !== 0) throw new Error('QA fixture initial commit failed');
+      const initialCommit = initial.stdout.toString().trim();
+      const qaFixUrl = `http://127.0.0.1:${qaFixServer!.port}`;
 
-  testConcurrentIfSelected('qa-fix-loop', async () => {
-    const qaFixUrl = `http://127.0.0.1:${qaFixServer!.port}`;
-
-    const result = await runSkillTest({
-      prompt: `You have a browse binary at ${browseBin}. Assign it to B variable like: B="${browseBin}"
+      result = await runSkillTest({
+        prompt: `${browserPrompt('qa/SKILL.md')}
 
 Read the file qa/SKILL.md for the QA workflow instructions.
 qa is a carved skill: when SKILL.md tells you to Read ~/.claude/skills/zstack/qa/sections/<file>, read qa/sections/<file> in this working directory instead (same content, local copy).
 Skip the preamble bash block, lake intro, telemetry, and contributor mode sections — go straight to the QA workflow.
 
 Run a Quick-tier QA test on ${qaFixUrl}
-The source code for this page is at ${qaFixDir}/index.html — you can fix bugs there.
+The source code for this page is at ${qaFixDir}/index.html — use the Edit tool for source fixes; keep Bash for browser and git commands.
 Do NOT use AskUserQuestion — run Quick tier directly.
 Write your report to ${qaFixDir}/qa-reports/qa-report.md
 
 This is a test+fix loop: find bugs, fix them in the source code, commit each fix, and re-verify.`,
-      workingDirectory: qaFixDir,
-      maxTurns: 40,
-      allowedTools: ['Bash', 'Read', 'Write', 'Edit', 'Glob', 'Grep'],
-      timeout: CAPTURE_LONG_MS,
-      testName: 'qa-fix-loop',
-      runId,
-    });
+        workingDirectory: qaFixDir,
+        maxTurns: 40,
+        allowedTools: ['Bash', 'Read', 'Write', 'Edit', 'Glob', 'Grep'],
+        timeout: remainingWorkMs(),
+        testName: 'qa-fix-loop',
+        runId,
+      });
 
-    logCost('/qa fix loop', result);
-    recordE2E(evalCollector, '/qa fix loop', 'QA Fix Loop E2E', result, {
-      passed: ['success', 'error_max_turns'].includes(result.exitReason),
-    });
+      logCost('/qa fix loop', result);
 
-    // Accept error_max_turns — fix loop may use many turns
-    expect(['success', 'error_max_turns']).toContain(result.exitReason);
+      // Accept error_max_turns — fix loop may use many turns
+      expect(['success', 'error_max_turns']).toContain(result.exitReason);
 
-    // Verify at least one fix commit was made beyond the initial commit
-    const gitLog = spawnSync('git', ['log', '--oneline'], {
-      cwd: qaFixDir, stdio: 'pipe', timeout: 30_000,
-    });
-    const commits = gitLog.stdout.toString().trim().split('\n');
-    console.log(`/qa fix loop: ${commits.length} commits total (1 initial + ${commits.length - 1} fixes)`);
-    expect(commits.length).toBeGreaterThan(1);
+      // Verify at least one fix commit was made beyond the initial commit
+      const gitLog = spawnSync('git', ['log', '--oneline'], {
+        cwd: qaFixDir, stdio: 'pipe', timeout: Math.min(30_000, remainingWorkMs()),
+      });
+      const commits = gitLog.stdout.toString().trim().split('\n');
+      console.log(`/qa fix loop: ${commits.length} commits total (1 initial + ${commits.length - 1} fixes)`);
+      expect(commits.length).toBeGreaterThan(1);
 
-    // Verify Edit tool was used (agent actually modified source code)
-    const editCalls = result.toolCalls.filter(tc => tc.tool === 'Edit');
-    expect(editCalls.length).toBeGreaterThan(0);
-  }, CAPTURE_LONG_MS);
-});
+      // Require a committed change to the seeded source, independent of tool.
+      const sourceDiff = spawnSync('git', ['diff', '--exit-code', initialCommit, 'HEAD', '--', 'index.html'], {
+        cwd: qaFixDir, stdio: 'pipe', timeout: 30_000,
+      });
+      expect(sourceDiff.status).toBe(1);
+      expect(sourceDiff.stdout.toString().trim().length).toBeGreaterThan(0);
+      passed = true;
+    } catch (error) {
+      failure = error;
+      throw error;
+    } finally {
+      // Record only after the existing assertions settle; a process can finish
+      // successfully while its fixture assertions fail.
+      try {
+        const error = passed ? undefined : failure instanceof Error ? failure.message : String(failure);
+        if (result) {
+          recordE2E(evalCollector, '/qa fix loop', 'QA Fix Loop E2E', result, {
+            passed, ...(passed ? {} : { error }),
+          });
+        } else {
+          evalCollector?.addTest({
+            name: '/qa fix loop', suite: 'QA Fix Loop E2E', tier: 'e2e', passed: false,
+            duration_ms: Date.now() - started, cost_usd: 0,
+            model: process.env.EVALS_MODEL ?? resolveEvalModel('capture'),
+            exit_reason: 'harness_error',
+            error: `${error}\nRunner returned no result; cost and usage unavailable.`,
+          });
+        }
+      } catch (recordError) {
+        if (!passed) throw new AggregateError([failure, recordError], 'QA fix-loop attempt and recording failed');
+        throw recordError;
+      } finally {
+        qaFixServer?.stop();
+        try { fs.rmSync(qaFixDir, { recursive: true, force: true }); } catch {}
+      }
+    }
+  }, CAPTURE_LONG_MS + finalizeMs);
+}, browserSelected);
 
 // --- Test Bootstrap E2E ---
 

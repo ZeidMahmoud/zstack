@@ -1,17 +1,18 @@
 #!/usr/bin/env bash
 # sync-upstream.sh — rebuild the zstack tree from an upstream gstack checkout.
 #
-# zstack is a mechanical rebrand of gstack (gstack→zstack in file names, paths
-# and file contents, four case variants) plus a small overlay of hand edits
-# (persona removal, LICENSE, README install URLs). Merging upstream with git is
+# zstack is a mechanical rebrand of gstack (see scripts/zstack-rebrand.py for
+# the rules) plus a small overlay of hand edits (README, LICENSE). Merging upstream with git is
 # hopeless because the rebrand touches every file, so instead this script
 # regenerates the whole tree from upstream and re-applies the overlay:
 #
-#   1. stage   — copy every git-tracked upstream file into a staging dir,
-#                renaming paths and rewriting contents
+#   1. stage   — scripts/zstack-rebrand.py copies every git-tracked upstream
+#                file into a staging dir, renaming paths and rewriting
+#                contents (gstack→zstack, upstream owner/persona→zeid), and
+#                repins the fixture sha256 digests the rewrite invalidated
 #   2. replace — drop every tracked file in this repo except the preserved
 #                set (ZSTACK.md, claude-extras/, scripts/sync-upstream.sh,
-#                zstack-overlay/) and copy the staged tree in
+#                scripts/zstack-rebrand.py, zstack-overlay/) and copy the staged tree in
 #   3. overlay — `git apply --3way` each patch in zstack-overlay/*.patch;
 #                hunks that no longer apply are reported, never silently lost
 #   4. regen   — rebuild generated SKILL.md files from their .tmpl sources
@@ -50,44 +51,16 @@ while [ $# -gt 0 ]; do
 done
 
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
-PRESERVE_RE='^(ZSTACK\.md|claude-extras/|scripts/sync-upstream\.sh|zstack-overlay/)'
+PRESERVE_RE='^(ZSTACK\.md|claude-extras/|scripts/sync-upstream\.sh|scripts/zstack-rebrand\.py|zstack-overlay/)'
 
 [ -d "$UPSTREAM/.git" ] || [ -f "$UPSTREAM/.git" ] || { echo "not a git checkout: $UPSTREAM" >&2; exit 1; }
 
-# ─── rebrand helpers ─────────────────────────────────────────────
-# The content rewrite also repoints every github.com/garrytan/gstack reference
-# (which the rename would otherwise turn into the nonexistent garrytan/zstack)
-# at this fork, so update checks, clone URLs and raw VERSION lookups resolve.
-REBRAND_SED='s/gstack/zstack/g; s/GSTACK/ZSTACK/g; s/GStack/ZStack/g; s/Gstack/Zstack/g'
-CONTENT_SED="$REBRAND_SED; s#garrytan/zstack#ZeidMahmoud/zstack#g"
-rebrand_path() {
-  printf '%s' "$1" | sed "$REBRAND_SED"
-}
-rebrand_file() { # src dst
-  if [ -s "$1" ] && grep -Iq . "$1"; then
-    sed "$CONTENT_SED" "$1" > "$2"
-    chmod --reference="$1" "$2"
-  else
-    cp -p "$1" "$2"
-  fi
-}
-
 # ─── 1. stage ────────────────────────────────────────────────────
+# scripts/zstack-rebrand.py owns the rebrand rules (names, owner, persona,
+# kept-verbatim and dropped files) and repins the fixture digests they break.
 stage() { # dest
-  local dest="$1" f out n=0
-  mkdir -p "$dest"
-  while IFS= read -r f; do
-    [ -e "$UPSTREAM/$f" ] || continue
-    out="$dest/$(rebrand_path "$f")"
-    mkdir -p "$(dirname "$out")"
-    if [ -L "$UPSTREAM/$f" ]; then
-      ln -s "$(rebrand_path "$(readlink "$UPSTREAM/$f")")" "$out"
-    else
-      rebrand_file "$UPSTREAM/$f" "$out"
-    fi
-    n=$((n+1))
-  done < <(git -C "$UPSTREAM" ls-files)
-  echo "staged $n files from $UPSTREAM ($(cat "$UPSTREAM/VERSION" 2>/dev/null || echo '?'))"
+  mkdir -p "$1"
+  python3 "$REPO/scripts/zstack-rebrand.py" "$UPSTREAM" "$1"
 }
 
 if [ -n "$STAGE_ONLY" ]; then
@@ -107,7 +80,7 @@ if [ "$REFRESH" -eq 1 ]; then
   : > "$out.tmp"
   while IFS= read -r f; do
     case "$f" in
-      SKILL.md|*/SKILL.md|ZSTACK.md|claude-extras/*|scripts/sync-upstream.sh|zstack-overlay/*) continue ;;
+      SKILL.md|*/SKILL.md|ZSTACK.md|claude-extras/*|scripts/sync-upstream.sh|scripts/zstack-rebrand.py|zstack-overlay/*) continue ;;
     esac
     [ -f "$STAGE/$f" ] || continue
     if ! cmp -s "$STAGE/$f" "$f"; then

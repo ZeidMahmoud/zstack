@@ -1,5 +1,528 @@
 # Changelog
 
+## [1.89.0.0] - 2026-09-24
+
+**Find shared code worth keeping.**
+**Get the evidence before you extract it.**
+
+`/deslop-shared-libs` finds places where sharing code could remove duplication and prevent repeated fixes. It starts with the preceding 14 UTC days of commits and PRs, plus relevant work on your branch, then follows the callers and helpers behind promising candidates. Each recommendation names compatible source locations, a small helper, the tests needed, and estimated savings after integration work. The skill recommends changes and stops; it does not edit your project or create issues or PRs.
+
+### The three numbers that matter
+
+Source: the workflow contracts in `deslop-shared-libs/SKILL.md.tmpl`, `plan-eng-review/sections/review-sections.md.tmpl`, and `review/SKILL.md.tmpl`, plus the generated catalog census. Run `bun test test/shared-libs-rendering.test.ts test/catalog-budget.test.ts` to verify distribution and catalog size. These are feature and source-size counts against v1.87.5.0, not performance measurements.
+
+| Metric | Before | After | Δ |
+|---|---:|---:|---:|
+| Dedicated recent-work shared-code audit skills | 0 | 1 | +1 |
+| Parent reviews using the shared-code rubric | 0 | 2 | +2 |
+| Generated catalog name and description bytes | 4,593 | 4,675 | +82 |
+
+`/plan-eng-review` and `/review` now apply the same criteria within the plan or diff you are already reviewing. They check existing helpers, caller compatibility, tests, and the risk of sharing a bug. They do not run the broader history audit.
+
+### What this means for developers
+
+You get up to five supported opportunities and up to three recommendations, with PR-covered work separated and missing evidence disclosed. Optional extractions require approval and do not lower the review score or block a clean result. A skipped extraction is reused only when its identity, branch, and verified source snapshot still match; actual defects keep normal fix handling. Run `/deslop-shared-libs`, or name a narrower area and time window.
+
+### Itemized changes
+
+#### Added
+
+- **`/deslop-shared-libs` recommends useful shared-code extractions.** Reports link authored callers, prefer existing helpers, account for tests and integration, and explain reliability gains and risks. Generated and third-party copies do not count toward savings. Fewer recommendations, including none, are valid.
+- **Recent work includes PR overlap checks.** The audit distinguishes code changes from comment activity, checks relevant older open PRs within a bounded scan, charges repeated page requests against the limit, and reports inaccessible history or truncated coverage. API reads never create response files, including temporary files outside the project.
+
+#### Changed
+
+- **Engineering plans and code reviews share one extraction rubric.** `/plan-eng-review` can evaluate proposed callers with labeled assumptions. `/review` checks actual changed code and related callers even for small diffs and Codex installations without Review Army.
+- **Extraction advice stays separate from defects.** Advice requires approval, survives review persistence with its source evidence, and cannot suppress a real defect. Reusing a previous skip requires matching structural identity, verified source coverage, and branch binding.
+- **Decision briefs retain their headings and closing tradeoff in native question tools.** The question carries its pros-and-cons heading and final summary; options retain their own benefits and drawbacks.
+
+#### For contributors
+
+- Added generated-host, discovery, identity, fixture, source-binding, and behavioral coverage. Gate evaluations exercise read-only access and the review action/persistence lifecycle; periodic evaluations cover ranking, PR overlap, and live Codex behavior.
+- Coverage evaluations now recognize complete combined source reads and explicit diagram legends while retaining checks for source ownership, missing output, and contradictory evidence.
+- First-question evaluations capture public native questions with a restricted tool set. Mode selection uses the actual question-tool callback and stops without answering. Provider failures and stale output remain failures. Interactive captures survive fixture cleanup when an output directory is configured, including local runs without a named run ID.
+
+## [1.88.1.0] - 2026-09-22
+
+Credential masking follows the exact detected source, and pre-push scans follow the actual destination. Browser agents and CSO operations retain precise ownership, while settings updates and artifact reinitialization preserve user-owned data.
+
+### Fixed
+- Credential masking uses original spans mapped from normalized matches, so anchored assignments, repeated values, Unicode and entity input redact the flagged value without masking a later neighbor. Sanitizable CSO source stays readable as masked text; unmaskable payloads remain withheld.
+- Pre-push scans bind their ranges to the destination's name and effective URL, including separate push URLs. Missing advertised objects use a conservative range, SHA-256 repositories get the correct empty tree, and bounded slices retain normalized proximity context without fabricating line anchors or duplicate findings. Unscannable long lines or context windows still block explicitly.
+- Hermetic evaluation children reject credential-shaped variables admitted through broad CI prefixes, while preserving CI metadata, named provider authentication and explicit runner overrides.
+- Browser agents belong to the persistent daemon and an exact process generation. Replacement requires confirmed exit, failed startup retains uncertain children, and publication and shutdown share a lock so older generations cannot delete a successor's discoverability files. Repeated failed respawns are bounded. Uncertain ownership and abandoned publication locks require manual recovery rather than a process sweep.
+- CSO lease recovery preserves 64-bit filesystem identities and nanosecond timestamps instead of rounding them. Adjacent identities remain distinct, replaced files remain protected, and ambiguous legacy state is still refused.
+- Settings mutations, backups and rollback resolve the selected symlink target and share its canonical lock. Links, private file modes and unrelated settings survive; changed or invalid targets are refused.
+- Artifact reinitialization updates managed allowlist entries while retaining the user suffix byte-for-byte, including comments and a missing final newline. Ambiguous markers and failed reads or assembly leave the original allowlist intact.
+
+### Changed
+- Required native macOS checks cover agent lifecycle, concurrent shutdown and linked settings. The native Windows CSO suite exercises repeated commands and exact high-ID lease recovery on NTFS.
+
+## [1.87.6.0] - 2026-09-18
+
+**Review gates keep their proof.**
+**Coverage audits read the code first.**
+
+Plan reviews now keep decisions, report checks, and publication checks in order when permissions, stale choices, or host metadata writes fail. Coverage audits for `/review`, `/ship`, and plan reviews read concrete source and test files before drawing their diagrams, so gaps are tied to code paths instead of diff and config noise.
+
+Generation now validates every host and expected artifact, and Codex evaluation records retain failed execution and assertions. Plan reviews carry approved decisions through scope changes and save complete reports before declaring completion. CEO and engineering reviews save and verify each question before asking it; Autoplan reads and verifies the current plan, then publishes the parent phase report before advancing.
+
+### Fixed
+- PR evaluation plans keep a small changed-behavior profile and selected quality judges, while weekly and manual runs retain fresh broad coverage. Deferred checks remain visible. Verified workflow-judge passes can be reused within the same PR for 24 hours only when their complete inputs and runtime match.
+- Free tests use a refreshed timing inventory and balanced isolated CI runners. `test:quick` provides an explicit partial feedback run; the complete suite remains required. Collection fixtures wait for actual readiness instead of repeating fixed startup delays. Recovered retries retain their original failure logs. Windows fixtures handle native paths and give independent scenarios separate deadlines; prepared Git fixtures disable background maintenance before copying.
+- `/plan-ceo-review` and `/plan-eng-review` preserve scoped decisions, required save/read-back checks, and report publication before declaring completion or advancing to the next section.
+- Coverage audits read source and test files in a dedicated step before mapping `[OK]` and `[GAP]` rows, while keeping framework and config context separate.
+- `/plan-eng-review` clarifies setup gates, targeted audit timing, report ordering, and Outside Voice output surfaces without losing saved-question verification.
+- The plan-count timeout fixture closes stdin without forcing process exit before diagnostics can be captured.
+- Ship host golden files and parity size guards match the generated Codex, Factory, and plan-review outputs.
+- Skill generation awaits every artifact across all hosts. Freshness checks detect missing output, validate generated content, preserve files and directories during dry runs, and report generation errors instead of accepting partial output.
+- Codex evaluation records follow the runner result and assertions. Timeouts, failed validations, inherited output pipes, and interrupted attempts retain their actual outcomes, captured usage, and bounded cleanup.
+- Paid test supervision allows each file to finish its existing cases and configured retries. CI and detached-run limits cover the full schedule without increasing model work budgets.
+- `zstack-decision-log --help` explains the accepted payload and safe shell quoting without creating state.
+- Plan reviews preserve the selected mode and prior approvals, compare each option against independent changes, and verify complete reports before recording completion. Engineering reviews assign independent decisions before drafting options, then audit and save the complete question before presenting it. Accepted scope includes the full selected option and its conditions; conflicting wording requires a corrected question and another answer. DX reviews use the same onboarding milestone for benchmarks, targets, examples, and measurement, and carry required factual verification forward without unnecessary approval questions. Outside-review suggestions use explicit approval menus; a dependency conflict returns to the affected decision before the plan is declared ready.
+- `/plan-ceo-review` follows ordered phases and carries every existing approval through scope changes, including reviews with no new approach choice. It saves the complete question, option facts, and source references, then verifies the actual outgoing question against those saved fields and sends it unchanged. It applies file permissions consistently to plans, reports, tasks, and review metadata. When writes are forbidden, it carries complete review inputs in chat and labels them not persisted. A failed save stops completion. Unavailable reviewers and missing scores remain unavailable instead of inheriting a prior score.
+- Design skills save mockups, previews, and approved designs under the configured state directory, and later steps discover them there. CEO plan discovery also follows the configured state directory in design input detection and prior-plan context.
+- `/autoplan` loads each review's complete instructions, waits for asynchronous reviewers, and sends the current amended plan to spec reviewers. Each phase reloads its closing steps and verifies the full current plan before announcing completion; amendment checkpoints stay separate from reviewer inputs. Native review drivers acknowledge current questions and permissions promptly, reject stale frames and late completions, and recognize the offered manual handoff.
+- `/office-hours` preserves structured review evidence through completion, keeps supported handoff content when replacing review sections, and develops distinct builder ideas. `/setup-gbrain` handles fresh state, remote-only sharing declines, and interrupted attempts without leaking fixture state.
+- Terminal sessions drain output before reporting completion. Browser shutdown cleans up only the configured server instance. Pairing fixtures use checked ports and bounded cleanup. Deprecated-flag scans exclude workspace caches before searching and propagate command and filesystem failures.
+- CSO public reports redact repository roots regardless of their path, while private snapshots retain the identity needed for verification. CSO also rejects a remote Docker endpoint with the correct diagnostic even when Docker is not installed.
+
+### Changed
+- CEO, engineering and Autoplan instructions fit their existing prompt-size limits while retaining approval, saved-question verification and report-publication requirements. Engineering uses one section-loading step and one approval check, with explicit rules for independent choices and unchanged question payloads.
+- Review fixtures provide the application context and independent contracts their assertions require, declare supported editing and feedback interfaces, and verify existing rollback behavior. The DX count scenario covers a bounded onboarding decision checkpoint and defers independent roadmap work. Design evaluations submit real board feedback before acknowledging it and grant image reads only inside their owned artifact directory. Sol evaluations generate skills in private storage without replacing checkout caches. Native fixtures match complete permission text and offered handoff choices. Shared helper and source-template dependencies select the affected evaluations; overlay tests distinguish correctness from performance measurements.
+- Contributor instructions require focused reproductions and adjacent checks before paid evaluations, independent scheduling, launcher preflight with executed-case counts, reuse of passing checks with unchanged inputs, and one full free-suite acceptance run after the code is frozen. Recurring parser failures require checking the supported input class against the pinned runtime.
+
+## [1.87.5.0] - 2026-09-17
+
+**Tests finish sooner without dropping checks.**
+**CI stops waiting on unused tooling.**
+
+This release speeds up zstack's development feedback loop. Terminal-driven checks react to new output instead of waiting through a fixed polling interval. Synthetic CLIs can announce when their input handlers are ready, while real CLI sessions retain their startup grace and input debounces. Completed processes no longer stay alive just to finish unused timeout timers.
+
+### The three numbers that matter
+
+Measured on the same Linux machine with Bun 1.4.0. Run each named file with `bun test <file>` on the previous release and this version. The polyfill and daemon numbers are three-run wall-time medians on both sides; the permission baseline is one observed run, and its after value is a three-run median. These are individual test-file measurements, not whole-suite or production latency claims.
+
+| Test file | Before | After | Δ |
+|---|---:|---:|---:|
+| `browse/test/bun-polyfill.test.ts` | 17.30s | 1.29s | −93% |
+| `design/test/daemon-discovery.test.ts` | 17.78s | 11.99s | −33% |
+| `test/plan-count-file-permission.test.ts` | 97.05s | 30.92s | −68% |
+
+The permission suite still makes all 115 assertions, including its deliberate stale-prompt delay. Terminal observations are capped at four per second so animated output cannot turn faster responses into a busy loop.
+
+### What this means for contributors
+
+Local test runs spend less time waiting after work is already complete. CI planning no longer pulls the execution image or waits for image lookup before producing its manifest; executors still require both prerequisites, and missing or failed results still fail reconciliation. Run `bun run test` for the complete free suite.
+
+### Itemized changes
+
+#### For contributors
+
+- Wake plan-count checks on output and exit, retain a silent metadata fallback, and settle output bursts before reading split redraws. Three synthetic CLI suites use explicit startup readiness without changing real-CLI startup behavior.
+- Cancel unused PTY and Node deadlines, stop already-exited daemon fixtures immediately, clear cookie-picker fixture sessions between suites, and await watchdog shutdown with a bounded completion signal.
+- Await telemetry append completion in consent tests instead of assuming disk writes finish within 30ms. Consent checks and error swallowing are unchanged.
+- Run gate and periodic CI planners directly on pinned Bun without dependency installation. Reports also skip unused installs; fork restrictions, executor images, and failure checks remain intact.
+- Retain failed eval shard logs from the hidden CI cache directory without uploading unrelated cache files.
+- Inject the CSO Git-pointer race at its first bounded read, preserving the original rejection assertion.
+- Preload the UI-positive design-review eval in an isolated plan fixture and require an answered native design question, rather than accepting scope or outside-review menus. Bind command-rejection checks to the invoked skill, not a child tool's diagnostics.
+- Generate skill documentation in a fresh checkout without importing browser runtime dependencies. Keep snapshot flag metadata and public exports unchanged.
+- Eliminate early-reader pipe races in artifact URL normalization and safety-hook matching. Multiline commands retain their warnings even with large trailing content.
+- Treat a publication removed by another CSO recovery helper during candidate enumeration as a bounded retry; replacement inodes still fail closed.
+
+## [1.87.4.0] - 2026-09-16
+
+**Failed checks stay failed.**
+**Health scores show what actually ran.**
+
+`/health` now keeps each checker's exit status and counts diagnostics from its complete output. Reports still show only the final 50 log lines. Scores name the checked and unavailable categories, so a partial run carries its coverage beside the number. Runs with no checks produce no numeric score or history entry.
+
+### The three numbers that matter
+
+Source: the synthetic checker in `test/health-capture.test.ts`, which emits 60 type errors followed by 80 context lines and exits 2. These measurements compare the v1.87.3.0 capture example with this version under default Bash without `pipefail`. Run `bun test test/health-capture.test.ts` to verify current behavior. These are correctness measurements, not production statistics.
+
+| Metric | Before | After | Δ |
+|---|---:|---:|---:|
+| Reported checker exit status | 0 | 2 | +2 |
+| Type errors available for scoring | 0 | 60 | +60 |
+| Displayed checker log lines | 50 | 50 | 0 |
+
+The failing checker no longer looks successful because `tail` succeeded. All 60 errors count even when the displayed tail contains only context.
+
+### What this means for developers
+
+You can distinguish a score backed by several checks from one based on a single available tool. Empty runs report `N/A — no checks ran`; capture errors also remain unscored and leave existing history unchanged. Trends compare only matching categories, so installing a new checker does not manufacture a regression or improvement. Run `/health` to see the score and its coverage together.
+
+### Itemized changes
+
+#### Fixed
+
+- **`/health` preserves failed checks and complete diagnostic counts.** Reports show the final 50 output lines while scoring the full log and the checker's actual exit status. Temporary capture errors remain explicit errors.
+- **Health scores disclose coverage.** Partial runs list checked and unavailable categories. Runs with no checks report `N/A — no checks ran`, leave numeric history unchanged, and have no trend. Score comparisons require matching categories.
+
+#### Changed
+
+- Routing evaluations choose among installed ZStack skills, keeping built-in CLI skills outside the evaluated catalog. The model still chooses by matching the request to each skill's description.
+
+## [1.87.3.0] - 2026-09-15
+
+**Changed code needs another pass.**
+**Review freshness now checks both ends.**
+
+A green review now stays attached to the code that was there when the pass began. `/review` and `/ship` capture that content before reading it, then compare again when the pass finishes. If fixes changed the files, another pass has to review those fixes before the dashboard can call the result CURRENT. Older log-only records remain visible, but cannot stand in for a completed code review.
+
+A clean result requires a completed pass on unchanged content with no unresolved findings. A stopped or nonconverged run cannot clear the code-review row just because its commit has not moved.
+
+### The three numbers that matter
+
+Source: scenarios in `test/review-start-evidence.test.ts`, checked against released v1.87.0.0 and this version. Run `bun test test/review-start-evidence.test.ts` to verify current behavior. These are false CURRENT grades across five deterministic cases, not production incident estimates.
+
+| Cases incorrectly graded CURRENT | Before | After | Δ |
+|---|---:|---:|---:|
+| Mid-review edits: tracked and untracked source | 2 | 0 | -2 |
+| Log-only result without a captured review start | 1 | 0 | -1 |
+| Codex advisory findings: none or only some resolved | 2 | 0 | -2 |
+
+The old stamp could certify a review after its own fixes changed the tree. Those cases now stay STALE or UNVERIFIED, including an advisory-only Codex pass that leaves findings unresolved.
+
+### What this means for developers
+
+You can distinguish a completed, unchanged pass from a run that still needs attention before merging. Plan reviews keep their existing rules; they assess the plan rather than the checked-out source. Completion is still reviewer-reported, not proof that an LLM read every file. Run `/review` again after fixes and use the new result when preparing to ship.
+
+### Itemized changes
+
+#### Fixed
+
+- **Review freshness no longer certifies unreviewed fixes.** `/review` and `/ship` bind each diff pass to the content captured before it starts. Edits during review, incomplete passes, and older log-only records stay stale or unverified in the readiness dashboard and `/land-and-deploy`, even when HEAD has not moved. Plan-review evidence keeps its existing freshness rules.
+- **Codex readiness keeps unresolved findings visible.** Passing the critical-findings gate does not make a review CURRENT while advisory findings remain open. The gate's severity policy is unchanged.
+
+## [1.87.2.0] - 2026-09-15
+
+**Headless commands stop closing your logged-in browser.**
+**Other projects leave it alone.**
+
+Keep a headed ZStack Browser open while another project uses headless browse commands. Starting, stopping, or disconnecting that project's headless daemon no longer kills the process holding your headed profile or removes its locks. The shared-profile cleanup now runs only for headed sessions, which actually use that profile. Headed startup keeps its stale-lock recovery.
+
+### The three numbers that matter
+
+Source: `bun test browse/test/chromium-profile-isolation.test.ts`, running the same nine-case regression suite against unchanged main and this release. Its headless CLI cases pair a real daemon with a controlled live process holding another project's profile locks. The headed startup controls use a stub daemon.
+
+| Metric | Before | After | Δ |
+|---|---|---|---|
+| Isolation suite cases passing | 3 of 9 | 9 of 9 | +6 |
+| Isolation suite cases failing | 6 of 9 | 0 of 9 | -6 |
+| Headed startup controls passing | 2 of 2 | 2 of 2 | Unchanged |
+
+The six previously failing cases now pass without deleting the foreign locks or killing their holder. Both explicit `--headed` and `BROWSE_HEADED=1` still clear stale locks before launch.
+
+This release separates headless cleanup from the shared headed profile. It does not give two headed sessions separate profiles, and it does not fix production Chromium process-identity capture. Tests that supply a recorded process identity verify its cleanup behavior; they are not evidence that a real launch records that identity.
+
+### What this means for multi-project work
+
+You can leave one browser open for work that needs your logins while another project starts or stops its own headless daemon. That removes the cross-project cleanup path behind the disappearing-window report, without claiming a solution for two headed browsers sharing one profile. Upgrade zstack and keep using your existing headed connection.
+
+### Itemized changes
+
+#### Fixed
+
+- Headless daemon startup, stop, disconnect, and crash cleanup leave another project's headed browser and shared profile locks alone. Headed launches retain stale-lock cleanup. (#2817)
+
+#### For contributors
+
+- Added nine regression cases for shared-profile isolation, including cleanup with a supplied recorded process identity. Production identity capture is not validated by those fixtures.
+- Extended only the outer deadline of the native Windows USERPROFILE integration test to 120 seconds. Its assertions and subprocess timeouts are unchanged.
+
+## [1.87.1.0] - 2026-09-15
+
+**Two vulnerable dependencies are fixed.**
+**Archive extraction keeps its boundary.**
+
+Sharp now resolves to 0.35.4, replacing the vulnerable libheif bundle, and adm-zip resolves to 0.6.1, which rejects extraction through destination symlinks. Both packages arrive through transitive dependencies, so the override changes also update the resolved lockfile and Sharp's platform packages. A normal archive still extracts, and the screenshot downscaler still reads and resizes PNGs. The fix does not change the pinned evaluation harness or add a vulnerability exception. This takes the dependency update from #2867 without bundling its separate override-expiry and scheduled-notification proposals into the security patch.
+
+### The three numbers that matter
+
+These results come from OSV-Scanner 2.3.8 with the existing `.osv-scanner.toml`, and `bun test test/dependency-security.test.ts` against the original and updated lockfiles.
+
+| Check | Before | After | Δ |
+|---|---:|---:|---:|
+| Unsuppressed OSV findings | 2 | 0 | -2 |
+| Security regression checks passing | 1/6 | 6/6 | +5 |
+| Destination-symlink escape cases rejected | 0/2 | 2/2 | +2 |
+
+The two escape cases cover a symlinked file and a symlinked directory. Both now refuse the write and leave the file outside the extraction directory unchanged. The scanner's existing exceptions remain in place; zero unsuppressed findings is not a claim that every dependency is vulnerability-free.
+
+### What this means for users
+
+The installed dependency tree no longer carries these two known-vulnerable versions. The screenshot path continues to handle PNGs, while archive extraction gains the upstream boundary check without a new configuration switch. Upgrade, then run `bun install --frozen-lockfile` to install the fixed dependency set.
+
+### Itemized changes
+
+#### Security
+- Upgrade the `sharp` override to 0.35.4 and `adm-zip` to 0.6.1, including the resolved Sharp platform packages. Addresses #2866. Contributed by @smsmatt in #2867.
+- Add regression coverage for fixed version floors, the loaded Sharp runtime, ordinary archive extraction, and file/directory destination symlink rejection.
+
+## [1.87.0.0] - 2026-09-11
+
+**`/cso` now distinguishes verified vulnerabilities from hypotheses and coverage gaps, and qualified comprehensive audits can produce replayable repair bundles without changing your working branch.**
+
+### Added
+- `/cso --doctor`, `--resume`, `--replay`, and `--recheck` diagnose prerequisites, recover interrupted work, repeat recorded verification, and establish closure from a fresh snapshot. `--base`, `--budget`, and `--offline` make scope, time, and network policy explicit.
+- A native `zstack-cso` helper captures tracked changes and nonignored source without Git hooks or staging, rejects unsafe files and changing inputs, redacts output before storage, enforces run budgets, and retains recoverable reports and bundles under the private zstack state root.
+- Comprehensive audits have declared preparation paths for Node, Bun, Python, and Rails, with SQLite and disposable PostgreSQL support. Dependency acquisition is separated from offline application execution, and target code runs only through the constrained local Docker policy.
+- Runtime-tested repair bundles record the original reproduction, an authenticated out-of-process security assertion, legitimate controls, the patch, dependency and configuration closures, provenance, and input hashes. Project-test completion remains `self_reported`; the stronger `tested` label is reserved for a future target-independent completion witness. Replay requires matching source; current-source rechecks collect new evidence instead of inheriting old status.
+- Scanner adapters normalize Gitleaks, OSV-Scanner, Semgrep, zizmor, Trivy, Schemathesis, and imported SARIF as candidate evidence with version, scope, freshness, exclusions, and failure records.
+- Protected release workflows, 40 vulnerable/fixed evaluation pairs across the four supported stacks, fault-injection tests, and runtime/scanner promotion gates qualify catalogs before comprehensive target execution is enabled.
+
+### Changed
+- Daily `/cso` audits remain bounded and static. Reports begin with `complete`, `partial`, or `not assessed`, publish supported findings as they become available, separate severity from confidence and evidence, and say exactly which security work was left undone.
+- Security judgment now models actors, assets, entrypoints, tenant boundaries, sensitive operations, and invariants; challenges each candidate against callers and controls; and evaluates development dependencies, availability, historical secrets, role-controlled input, and zstack-owned skills by attacker control and impact.
+- Setup builds the trusted launcher only when Bun supports all required no-autoload flags and the native toolchain is available. Unsupported hosts retain the rest of zstack and receive a precise `/cso` prerequisite instead of a partially trusted helper.
+- Legacy v2 reports remain readable as historical review evidence. They never inherit v3 reproduced, repair-tested, or current-source closure status.
+- The authenticated repository owner account `@garrytan` is exempt from the PR liveness screenshot; all other contributors still provide live `ZSTACK PR` proof.
+
+### Security
+- Runtime startup strips injection variables, binds absolute executables and allowlisted environments, rejects remote Docker contexts, and uses pinned images, non-root containers, dropped capabilities, read-only roots, bounded writable storage and output, no published ports, and network-isolated reproduction groups.
+- Runtime and scanner catalogs ship unpromoted until protected native Docker qualification succeeds. On an unqualified installation, `/cso --doctor` reports the missing qualification and comprehensive target execution fails closed; static assessment remains available.
+
+## [1.86.0.0] - 2026-09-11
+
+### Added
+
+- **Get an independent Claude Code review from Codex.** Planning, review, shipping, design, documentation, and spec workflows select their outside reviewer from the running harness. Codex calls Claude Code; Claude Code calls Codex. Other supported harnesses expose both review skills.
+- **Review, challenge, or consult with `/claude-code`.** Reviews use only the context supplied by the parent. Consultations can read repository files and resume the previous conversation, using your configured Claude authentication and model.
+
+### Changed
+
+- **`/claude` is now `/claude-code`.** Run setup to migrate existing installations, including shared and copied installs. Each wrapper is available outside its own harness, and Kiro receives its native skills. Successful migration removes the old name without an alias; failed repairs preserve the working entry and user files.
+- **See which outside reviews actually completed.** Reports retain the provider and phase for each pass, including partial `/autoplan` coverage. Disabled, skipped, unavailable, and completed reviews stay distinct; historical records keep their original attribution.
+
+### Fixed
+
+- Failed, refused, empty, or malformed outside reviews can no longer count as a clean pass. Claude runner failures include authentication, timeout, and output overflow diagnoses, and stale skills stop before invoking their own harness.
+- Spec review stops when redaction fails, before sending the spec to a reviewer or saving it downstream.
+- Generated skills preserve their source files when an output directory links back into the installation, including on Windows.
+- Planning reviews request each unresolved decision before editing and carry approved remedies across sections without asking again. Choosing a scope or approach does not approve every finding. Reviews preserve stated requirements unless you authorize changing them.
+- Autoplan preserves the original plan and checks that each phase’s recorded requirements reach the next reviewer. It reconciles approvals with that record, reads the review skills installed for the current harness, and waits for reviewers and verified plan updates before advancing. Disabling extra plan or documentation review also skips replacement reviewers.
+
+## [1.84.1.0] - 2026-09-09
+
+### Changed
+- Codex reviews, consultations, and evals now default to GPT-6 Astra. Choose another model with `ZSTACK_CODEX_MODEL` or an explicit model in your request; the readiness probe checks that same selection.
+- Claude outside voices and eval capture/judging now default to Fable 5.1. Outside voices accept `ZSTACK_CLAUDE_MODEL`; evals retain their explicit and environment model overrides. Warmup and distillation keep their cheaper defaults.
+
+### Fixed
+- Native Codex reviews honor the selected model even when the CLI has a separate review-model pin. Claude judges parse text after thinking blocks, and arm judgments omit the temperature setting Fable does not support.
+- Frontier judges have enough output budget for thinking and JSON. Workflow evals read generated sections in execution order, without duplicated content.
+- Ship and plan reviews keep approval gates with the parent agent, preserve readiness checks, and use project-native test commands. QA scoring and monitoring rules are explicit; Aside drive options wait for a successful readiness probe.
+- Benchmark timing uses the navigation entry's actual fields. Deploy setup collects missing configuration, and failed vendored upgrades restore their backup instead of deleting it.
+- Retro reports distinguish verified merges from PR references, use the session date for snapshots, and define report ordering. The quality eval includes compare-mode instructions instead of cutting them off.
+- Documentation review runs before publication so approved fixes reach the PR. Changelog protection, unavailable-review handling, and raw/enveloped PR-body handling are consistent across the workflow.
+
+## [1.84.0.0] - 2026-09-09
+
+**zstack's design skills now start with 61 deterministic anti-pattern checks, in your voice, then spend their judgment where a detector cannot.**
+**DESIGN.md is written in the open format that impeccable and Google Stitch read, and the AI-slop list lives in one typed catalog instead of four drifting copies.**
+
+If you have [impeccable](https://impeccable.style) installed, `/design-review`, `/design-html`, `/review`, and `/ship` run its engine first and hand you its findings as `FINDING-NNN [rule-id]` rows with file:line and a handoff (`/impeccable typeset`, `layout`, `colorize`, ...) before the LLM pass reads a page. zstack never runs impeccable's installer or launcher. The first time a design skill finds no engine it asks once: download the 16 MB engine binary from impeccable's own GitHub release into `~/.impeccable`, checked against a checksum zstack pins and recorded in your egress ledger first, or not. Say no and nothing changes and nothing nags; `zstack-config set design_detector off` silences every trace. The probe only reads files, the engine runs only from under your home directory, and a checked-out repository can never make zstack execute one of its own files.
+
+On a live URL, `/design-review` scans the rendered page: the DOM is dumped with linked stylesheets inlined and scripts, input values, handlers, and query strings stripped, redaction-checked, kept owner-only, and the engine reads that, so Rule 4 holds on a deployed site. `/design-consultation` writes the open DESIGN.md spec (tokens in front matter, eight canonical sections, your Motion and Decisions Log kept). An existing file is converted only when you say so, once, and the answer is recorded in the file.
+
+### The numbers that matter
+
+Source: `git diff origin/main --shortstat`, `lib/design-catalog.ts` (`bun -e` over the exports), the free-suite log recorded by `zstack-evidence`, and the paid E2E rerun on this branch (`test/skill-e2e-design.test.ts`, `test/skill-e2e-review.test.ts`, 12 cases).
+
+| Metric | Before | After | Δ |
+|---|---|---|---|
+| Deterministic checks in a design review | 0 | 61 rules (impeccable's engine, one consented download away) | evidence before judgment |
+| Places the AI-slop vocabulary lived | 4 files, drifting | 1 typed catalog, 86 entries (57 slop, 29 quality) | `review/design-checklist.md` is generated from it |
+| Skills that run the detector | 0 | 4 (`/design-review`, `/design-html`, `/review`, `/ship`) | same rule ids everywhere |
+| What a scan can read | source files | source files or the rendered DOM of a live URL | works on deployed sites |
+| DESIGN.md format zstack writes | private schema | open DESIGN.md spec | impeccable and Stitch read it |
+| New `test()` declarations (platform-gated ones included) | | 194 across 11 files | free suite: 9,206 tests, 12/12 paid E2E |
+
+The row you feel is the first one: a purple gradient, a kicker above a heading, a nested card, or `Inter` as the display face is a machine finding with a file:line before anyone forms an opinion, so the review's judgment goes to hierarchy, trust, and copy.
+
+What this means for anyone shipping a UI with zstack: say yes once when a design skill offers the engine (or install impeccable yourself), then run `/design-review` as before. The mechanical rows arrive first, tagged, deduplicated against the checklist, and calibrated against your DESIGN.md tokens. Never install it and every design skill behaves as in v1.81, with sharper doctrine.
+
+### Itemized changes
+
+#### Added
+- **Design detector** (`bin/zstack-design-detect.ts`, config key `design_detector: auto|off`): `probe` reports `IMPECCABLE_READY | NOT_CACHED | NOT_AVAILABLE | DISABLED` plus skill, hook, and config-ignore lines without executing anything; `scan` runs the user-installed engine over repository files, changed frontend files (`--changed <base>`, NUL-safe, batched), or DOM dumps under `~/.zstack/projects/<slug>/designs/`, and prints one normalized JSON document plus a fenced, untrusted `DETECT_TOP` block grouped by rule; `rules` lists the mapping. Only an install under HOME (cache, env override, PATH, or the skill's sibling engine) whose real file is named `impeccable` is ever READY; URLs are refused; the engine sees a minimal environment; per-batch and whole-scan timeouts; findings capped and every field sanitized; exit 3 marks a zstack bug.
+- **Consent-gated engine install** (`zstack-design-detect.ts install`): when the probe finds no engine, the design skills ask one question, once, in interactive sessions only (never in spawned or headless runs). Yes downloads the engine version zstack has tested for your platform from github.com/pbakaus/impeccable's releases, verifies it against the checksum pinned in zstack for all five platforms, writes an egress receipt before the fetch (fail-closed), and places the one file under `~/.impeccable/bin/<version>/`: no impeccable skill, no editor hook, no launcher. "Never ask again" is remembered in `design_detector_install_prompted`; "turn it off" is `design_detector off`. zstack never runs `npx impeccable`.
+- **Phase 0 in `/design-review`**: source mode on a feature branch, DOM mode on any URL (Aside first, the bundled browser otherwise) through one shared dump script, `lib/dom-dump.js`; `design-baseline.json` gains per-page detector counts with id-level deltas and an `engine changed` caveat; Phase 10 reports `Detector: N → M`; deferred findings end with the `/impeccable <cmd>` handoff when the skill is installed.
+- **`/review` and `/ship`** design pass: the mechanical scan runs first, its rows bucket by tier (auto-fix, ask, possible), and a detector hit at the same file:line as a checklist hit is one row. **`/design-html`**: a bounded slop gate before screenshots, one fix pass, then accepted-with-reason rows.
+- **Typed design catalog** (`lib/design-catalog.ts`): 86 entries with rule ids, impact, tier, confidence, detection method, handoff, fonts, and the ten `mockupNever` patterns the image-generation prompt now refuses by default. `review/design-checklist.md` is generated from it by `bun run gen:skill-docs`.
+- **Doctrine**: Persuade / Operate / Read / Experience modes (MARKETING and APP UI kept as aliases), craft-floor reflexes (browser surfaces, one authored motion moment, depth with an offset, tinted secondary text, more space above a heading than below, light or dark from the use scene), the three-looks calibration, a font procedure with a role-scoped overused list, and Restrained / Committed / Full palette / Drenched color strategies.
+- **Open DESIGN.md format** (`lib/design-md.ts`, `bin/zstack-design-md.ts`: `check`, `convert`, `tokens`, `mark`): read, write, convert a legacy zstack file (backup kept), flatten tokens for calibration, and persist the one-time format choice as a marker line. `/design-consultation`, `/design-review`, and `/design-html` write and read it; `PRODUCT.md` prefills the consultation's questions.
+- **Attribution**: `NOTICE.md`, `licenses/Apache-2.0.txt`, and changed-file headers for material derived from impeccable and the DESIGN.md specification.
+
+#### Changed
+- `/design-consultation` chooses type by a procedure (name the world, shortlist per role, strike the overused list for that role, verify availability, state loading), varies direction across generations without flipping light and dark, and lists banned faces (Courier New now among them) from the catalog.
+- Landing-page rules ask for one authored motion moment and a brand texture or asset instead of halo, spotlight, stripe, or grid gradients; the universal font rule is scoped to the display voice with body/UI exceptions on Operate and Read surfaces.
+- zstack's own `DESIGN.md` is in the open format, with its intentional exceptions (the live-feed pulse, 11px mono data labels) recorded in the Decisions Log.
+- The design binary's variant set trades its light/dark flip for a drenched-color dial.
+- Repository `.impeccable/config*.json` ignores are surfaced (`IMPECCABLE_IGNORED_RULES`, `_FILES`, `_VALUES`) and treated as evidence in `/review` and `/ship`, settled decisions in your own project.
+
+#### For contributors
+- Real engine captures pin the contract (`test/fixtures/impeccable-*.json`, the dumped slop page, captured with engine 0.1.3 and its 61-rule registry); `test/fixtures/fake-impeccable.ts` drives the unit and E2E suites through env knobs (output file, exit code, sleep, argv log) that pass the wrapper's minimal engine environment.
+- New free suites: `zstack-design-detect`, `design-md`, `design-catalog`, `design-checklist-sync`, `design-detect-contract`, `frontend-scope`, `impeccable-fixtures`, `dom-dump-hygiene` (a real Chromium run, CI or `ZSTACK_DOM_DUMP_HYGIENE=1`), plus the brief test for the design binary. Gate E2E: `design-review-detector-shim` (source and DOM); periodic: `design-html-slop-gate`.
+- `design-review`'s eager ceiling moved to 31,319 tokens; the carve guards for `design-html` and `plan-design-review` are re-measured; the `bin/`-and-`lib/` linking rule now carries two more runtime bins.
+
+## [1.83.0.0] - 2026-09-09
+
+**Memorable's workflow memory plugs into Claude Code through zstack, behind a consent key you control.**
+**Every prompt it sees is receipted, secret-scanned and enveloped. The switch is off until you flip it.**
+
+Memorable (memorable.sh) is a third-party CLI that remembers how you did a task and recalls it the next time you ask for something similar. Its own installer registers a Claude Code hook directly. This release lets you register that hook through zstack instead, with `zstack-memorable enable`, and nothing changes until you run it. When you do, zstack records its own consent key (`memorable_recall`, listed by `zstack-egress grants` with its revoke command), writes an egress receipt before every prompt it hands to the vendor binary and skips the hand-off if the receipt cannot be written, refuses to hand over a prompt carrying a live-shaped credential, skips repositories whose trust policy is `deny` or `read-only`, runs the binary in an allowlisted environment inside its own process group under a 4.5 second budget, and wraps whatever comes back in the trust envelope so recalled text can never block a prompt or speak as zstack. `zstack-memorable status` shows the vendor CLI, the gate, who registered the hook (by identity, so it stays correct after Claude Code rewrites `settings.json`), receipt counts and recent errors. `disable` turns it off and verifies both the consent and the registration before it says so. Claude Code only; Windows is refused for now because there are no process groups to contain the vendor.
+
+The numbers that matter. Measured on a Linux sandbox with a fake vendor; the scan rows come from `scan()` in `lib/redact-engine.ts` on a synthetic log-like prompt dense in emails and IP addresses (256 KiB: 5,462 findings; 512 KiB: 10,898 findings), `main` against this release.
+
+| Metric | Before | After | Δ |
+|---|---|---|---|
+| Redaction scan, 256 KiB log-like prompt | 1,573 ms | 65 ms | 24x faster |
+| Redaction scan, 512 KiB log-like prompt | 6,182 ms | 126 ms | 49x faster |
+| Hook cost per prompt with the bridge disabled | no hook | 49 ms | shim, bun, one config read |
+| zstack work per prompt before the vendor runs | no hook | ~25 ms | gate, policy, scan, receipt |
+| Tests in the free suite covering this bridge and the hook manager | 0 | 128 | +128 |
+
+The scan speedup is not bridge-specific. Line and column for each finding used to be computed by walking the text from the start, so a pasted log full of addresses cost time quadratic in its matches; it is a binary search over a line index now, and every caller of the engine (`zstack-redact`, the pre-push hook, the PR-body scan in `/ship`) gets it.
+
+What this means for you: if you use Memorable, run `memorable login`, `memorable enable`, then `zstack-memorable enable`, and look at `zstack-egress list --sink memorable-recall` after a few prompts. If you do not, nothing changes: the key defaults to off, no hook is registered, `./setup` never registers one for you, and upgrading needs no migration. `docs/memorable-workflow-memory.md` says exactly what zstack hands over, what it can attest, and what is Memorable's own claim. Contributed by @AdvaiytSane and @NIkhil-cmd-cmd (#2831).
+
+### Itemized changes
+
+#### Added
+
+- **`bin/zstack-memorable enable | disable | status`**, the Memorable recall bridge (Claude Code only, off by default). `enable` needs the vendor CLI on the machine, registers zstack's hook at the stable install path with a 5 second timeout, refuses when Memorable's own installer already registered its hook (two entries would run the hook twice per prompt), verifies the stable install carries this bridge before touching anything, and sets `memorable_recall=on`. It never runs `memorable enable`: the vendor's capture consent is yours to grant. `disable` flips the key off first, removes zstack's entry by identity (tag or no tag), verifies both, and reports a partial failure as one. `status` never executes the vendor. One lifecycle transition runs at a time (a lock under `~/.zstack/locks`, stale after 30 seconds). Exit codes mirror the hook manager: 1 refused, 3 unparseable `settings.json`, 4 unexpected shape, 5 lock.
+- **`hosts/claude/hooks/memorable-user-prompt-hook`** (bash shim plus `memorable-user-prompt-hook.ts`), the UserPromptSubmit hook the bridge registers. One deadline clock undercuts Claude Code's 5 second hook kill; stdin is capped at 1 MiB; the prompt is scanned for HIGH-tier credential shapes on the raw bytes and on the decoded string values; the vendor sees only `PATH`, `HOME`, identity and locale variables, temp directories, the standard proxy, TLS and `XDG_*` variables and its own `MEMORABLE*` knobs; only a string `additionalContext` is accepted from it (a vendor `decision`, `continue` or `systemMessage` is dropped), control and Unicode format characters are stripped, the text is capped at 8 KiB on a UTF-8 boundary and enveloped. The vendor's whole process group is killed when the hook finishes, hangs past its budget, or is terminated by the host mid-flight (a process the vendor detaches into its own session is outside that guarantee); a vendor that exits but leaves a helper holding its pipes still gets its answer delivered. Every refusal is one rate-limited line in `~/.zstack/hook-errors.log` (created 0600); the hook always exits 0.
+- **`memorable_recall` config key** (`on | off`, default `off`, a typo is rejected and the prior value kept) and a **`memorable-recall` row in `zstack-egress grants`** naming the vendor CLI, the per-prompt receipt sink and the revoke command.
+- **Egress receipts for the `memorable-recall` sink**, fail-closed: no receipt, no hand-off. The receipt records the byte count and sha256 of the exact stdin handed over, the consent key, and `local:<path to the vendor executable>` as the recipient zstack can attest; the outcome records `exit:0 output-written bytes=N zstack_ms=N`, `exit:N injected=no`, `timeout`, `spawn-error:<code>` or `budget-exhausted`. A receipt with no outcome reads as unknown, never as success.
+- **`zstack-settings-hook list-items --event <E> [--owned-by <source>] [--command-regex <js-re>]`**, a read-only identity view: one JSON string literal per matching hook command, identity from the hook table rather than the tag, empty output when nothing matches, exit 3 on unparseable settings and 4 on an unexpected shape, so a caller can decide a mutation from it.
+- **`runExternal` in `hosts/claude/hooks/spawn-bin.ts`**, the contained way for a hook to run a third-party executable: its own process group, a wall-clock limit that kills the group, a stdout cap, a drained stderr tail, stdin write errors kept separate from spawn errors, resolution on the child's exit rather than on the last pipe closing, and a refusal on Windows.
+- **`lockBudgetMs`** on `writeReceipt` and `writeOutcome` in `lib/egress-receipt.ts`, so a caller on a deadline can bound the ledger lock wait (default unchanged at 2.5 seconds), and a **spawn timeout parameter** on `repoPolicyTier` in `lib/gbrain-repo-policy-client.ts`.
+- **`docs/memorable-workflow-memory.md`**: what you get, the two consents (zstack's and Memorable's, neither implies the other), what zstack hands over and what it can attest, what zstack tests and what is the vendor's claim, turning it on and off, and a troubleshooting runbook. A README row, a Docs-table row and a privacy pointer link to it.
+
+#### Changed
+
+- **`zstack-settings-hook remove-source` removes by identity as well as by tag.** Claude Code strips zstack's `_zstack_source` tag when it rewrites `settings.json`; the off switch for every zstack hook used to no-op on exactly those entries. Items the hook table identifies as the requested source are removed whether or not the entry is tagged, other sources' items are never touched, and entries with nothing of the source's stay byte-identical.
+- **`./setup --no-team` keeps the opt-in Memorable hook** when it sweeps stray zstack hooks, alongside the verify gate.
+- **`zstack-uninstall` removes the Memorable hook by name**, sets `memorable_recall` off wherever zstack's config lives (kept state or not, hook manager present or not, and a failed revocation is named), and says that Memorable's own consent is unchanged (`memorable disable`, `memorable forget`).
+- **Redaction findings locate their line and column by binary search** over a per-scan line index, so scan time is linear in the input for every caller of `lib/redact-engine.ts`.
+
+#### For contributors
+
+- New test files: `test/zstack-memorable.test.ts`, `test/memorable-user-prompt-hook.test.ts` (a fake vendor written in sh; the hook's stdin bytes are compared byte for byte with what the vendor received), `test/zstack-config-memorable-key.test.ts`. Extended: `test/zstack-settings-hook-schema-aware.test.ts` (identity removal pinned for every source in the hook table), `test/egress-receipt.test.ts`, `test/egress-receipt-wiring.test.ts` (the `hosts/` tree is now swept for unreceipted sinks), `test/uninstall.test.ts`, `test/gbrain-repo-policy-client.test.ts`, `test/redact-engine.test.ts`, `test/verify-gate.test.ts`, `test/setup-hook-canonical-paths.test.ts`, `test/hooks-windows-paths.test.ts`, `test/zstack-egress-cli.test.ts`.
+- `docs/PROJECT_STRUCTURE.md` lists the new hook and bin.
+
+## [1.81.0.0] - 2026-09-06
+
+**Aside is the browser zstack drives first. Every browsing skill, the PDF and diagram renderer, and web research go through it.**
+**zstack's own headless browser stays as the automatic fallback, so nothing stops working without Aside.**
+
+Since v1.72 Aside was the recommended driver for third-party sites. This release makes it the first driver everywhere. `/qa`, `/qa-only`, `/design-review`, `/scrape`, `/benchmark`, `/canary`, `/browse`, `/devex-review`, `/land-and-deploy`'s post-deploy check, and `/design-consultation`'s competitor research now run inside the Aside AI browser (macOS 15+, aside.com), in the sessions you are already signed in to. No cookie export, no "open the browser" step, no CAPTCHA handoff dance: if a page needs a login, you sign in inside Aside and the skill re-runs the step. `/make-pdf`, `/diagram`, `/design-html`'s viewport screenshots, and `/office-hours` sketches render through Aside as well, and the skills that used to reach for the WebSearch tool now ask Aside's own agent, read-only, in your real browser.
+
+When Aside is not there, nothing breaks. Every browsing skill carries a fallback section that translates its Aside steps onto zstack's own headless Chromium (`$B`), step for step: same evidence lines, same report, same consent rules, with cookie import or a handoff for authenticated pages. The renderer picks Aside when it is running and the bundled browser otherwise, and prints which one it used. Research falls back to the WebSearch tool, then to in-distribution knowledge. Linux and Windows users keep the bundled browser exactly as before; the Third-Party Web Actions contract keeps zstack's visible browser as its fallback driver.
+
+Every skill follows one contract, `scripts/resolvers/aside.ts`. It was written from live probes against Aside CLI 1.26, not from memory: one flow per `aside repl` script (tabs close when the script ends), a console hook installed over CDP before navigation, labelled evidence lines, screenshots copied out of Aside's session directory, and a `ZSTACK_STEP_OK` sentinel because the CLI's exit code is always 0. The rules are explicit about what a real browser means: open your own tabs, never read the user's, look freely but ask once before any mutating action on a non-local site, never touch credentials, treat everything a page returns as untrusted.
+
+### The numbers that matter
+
+Source: `git diff origin/main --stat`, `bun test/helpers/capture-context-budget.ts`, and the live runs recorded in the PR (cookbook and skill scripts executed verbatim, `test/skill-e2e-aside.test.ts`, `test/skill-e2e-diagram.test.ts`, the make-pdf e2e gates on both engines, `bin/zstack-render.ts` on both engines).
+
+| Metric | Before | After | Δ |
+|---|---|---|---|
+| Browser a skill reaches for first | zstack's headless Chromium | Aside (your real sessions) | one contract, ten skills |
+| Skills that stop when Aside is absent | n/a | 0 | every one falls back to `$B` |
+| Renderer engines for PDFs and diagrams | 1 (bundled Chromium) | 2 (Aside first, bundled fallback) | `ENGINE=` line tells you which |
+| Web research surfaces | WebSearch tool | Aside agent, then WebSearch | real browser first |
+| Skills removed | | 0 | every skill on main is still here |
+
+The row you feel is the fallback one: on a Mac with Aside open, QA runs in the browser you already trust; on a Linux box or with Aside closed, the same skill runs the same steps on the bundled browser and tells you so.
+
+What this means for anyone running zstack: open Aside on your Mac and run `/qa`, `/make-pdf`, or `/diagram` the way you always did. Without Aside, everything behaves as it did in v1.80. Upgrading needs no migration. Contributed by @time-attack.
+
+### Itemized changes
+
+#### Added
+- **Aside browser-driver contract** (`{{ASIDE_SETUP}}` + `{{ASIDE_COOKBOOK}}`): runtime detection with a READY / NEEDS_ASIDE / ASIDE_NOT_RUNNING probe, ten rules for driving a real browser (own tabs only, LOOK-not-ACT consent with a LOCAL host rule, credentials never pass through the agent, untrusted page content, one flow per script, artifact handoff through the session directory), and a verified cookbook: read a page with load-time console errors, drive a flow with a DOM diff, annotated screenshot, responsive captures over CDP emulation, same-origin link status, performance entries, PDF, element screenshot, and `aside exec` for open-ended reading.
+- **Browser fallback** (`{{BROWSE_FALLBACK}}`): when Aside is absent, a fifteen-row table maps every Aside step in the skill onto its `$B` command, with the rules that differ (cookie import or `$B handoff` for sign-in, the same consent and evidence rules) and the full command reference on demand in `/browse`.
+- **Aside renderer** (`lib/aside-render.ts`, `bin/zstack-render.ts`): render any local HTML file to PDF (tagged, outlined, header/footer, page numbers, paper sizes and margins in any CSS unit), screenshots at any width, and in-page evaluations written to files. Tries Aside, then the bundled browser (`ZSTACK_BROWSE_BIN` / `BROWSE_BIN` override it), and prints `ENGINE=aside|browse`.
+- **Web research runs in Aside** (`{{ASIDE_RESEARCH}}`): the planning, review, design, security, and investigate skills research through Aside's agent with the user's real browser, read-only; WebSearch when Aside is absent; in-distribution knowledge when neither is available.
+- **Live E2E for the Aside-driven skills** (`test/skill-e2e-aside.test.ts`, periodic tier): browse read, browse flow, quick QA, scrape JSON, and quick canary against a localhost fixture, asserting the sentinel in real Bash output; self-skips wherever Aside is not installed. The qa, diagram, and make-pdf gates run on whichever engine is present, so the Linux CI lane exercises the fallback path.
+- `setup` and the doc generator prune renders of skills that no longer exist in the source tree, so a removed skill can never linger in a host install.
+
+#### Changed
+- `/qa` and `/qa-only`: the whole methodology (orient, explore, document, re-test) runs as Aside scripts; the authenticate phase is now "you are already signed in"; a 13th rule requires consent before mutating actions on non-local targets. The fallback section carries the `$B` translation.
+- `/design-review` and `/design-consultation`: design-system extraction is one script printing FONTS, COLORS, HEADINGS, TOUCH_TARGETS, and NAV; competitor research confirms the exact URLs with you before opening any of them in your real browser, and runs on the bundled browser when Aside is absent.
+- `/benchmark` and `/canary`: per-page scripts print NAV, PAINT, LCP, RESOURCES, SCRIPTS, CSS, and SUMMARY; the canary loop re-runs the script every 60 seconds because nothing persists between Aside scripts.
+- `/land-and-deploy` Step 7 and `/devex-review`: one Aside script each; the smoke row reads `responseStatus` from the navigation entry.
+- `/make-pdf` prints through Aside first and the bundled browser otherwise; exit 4 now means no browser is available and names both remedies; mermaid fences, oversized-image downscale, and DOCX rasters each run as one render script; `$P setup` reports which engine it found.
+- `/diagram`: the SVG, PNG, and excalidraw triplet is one `zstack-render` call; every diagram type gets an excalidraw export (flowcharts and sequence diagrams as editable scenes, the rest as a single image element).
+- `/scrape`: look-then-extract Aside scripts that build the JSON inside the page; on the fallback the browser-skills runtime (`$B skill list` / `run`, `/skillify`) applies as before.
+- **Third-Party Web Actions** (`/ship`, `/spec`, `/setup-deploy`, `/office-hours`, `/land-and-deploy`): Aside is the recommended first driver; zstack's own visible browser stays as the fallback option, exactly the shape v1.72 introduced, and the contract points at the `/browse` doc for how to drive Aside.
+- `/browse`: the Aside contract, cookbook, mode choice (`aside repl` by default, `aside exec` for reading), report format, the fallback, and the full `$B` command reference on demand.
+- The root router, README, `BROWSER.md`, `docs/skills.md`, `docs/PROJECT_STRUCTURE.md`, `CONTRIBUTING.md`, `CLAUDE.md`, and `ARCHITECTURE.md` describe the Aside-first, bundled-fallback world.
+
+#### Fixed
+- `./setup`'s retired-skill prune is safe by construction: it never deletes a directory that holds your own files (only zstack's SKILL.md, marker and links go), never follows a symlink into someone else's tree, cleans a host's stale links even after the generator already removed the render, and recognizes a skill renamed through its frontmatter `name:`. The generator's own prune keeps any `zstack-*` directory without the generated banner and skips a host whose generation failed. `./setup` also rebuilds when the design or make-pdf binary is missing or when anything under `lib/` changed.
+- Setup's summary is honest about browsers: with Aside installed and a failed Chromium bootstrap it says only the bundled fallback is missing (and that `/pair-agent` needs it); `ZSTACK_SKIP_ASIDE=1` is honored by the skills' probe, by setup, and by the renderer alike.
+- The local render server behind `/make-pdf`, `/diagram`, and design previews serves one per-render secret URL, never follows a symlink out of its directory, and refuses malformed requests; page text can no longer forge its control lines; a hung `aside` process is killed instead of waited on forever; if the Aside CLI cannot start mid-run (or its private CDP bridge is missing) the render retries on zstack's own browser and reports which engine actually rendered — a page error or a timeout of a running script is never retried; a shared `/tmp/zstack-render` owned by someone else is never used.
+- Browsing skills check link status only on a LOCAL target (on a real site every HEAD request would carry your cookies); same-origin filtering compares real origins instead of string prefixes; `.local` hosts are no longer treated as your own machine (mDNS names resolve to other devices on the LAN); the Aside readiness probe has a 30-second deadline on stock macOS, which ships neither `timeout` nor `gtimeout`.
+- `aside exec` research requests write an egress receipt before leaving the machine, like every other off-machine send.
+- Rendering through the bundled browser tolerates a cold start: the first tab request retries once while the daemon is still coming up, and a command whose process is slow to exit under heavy load is waited for instead of being reported as failed.
+- `zstack-render --help` exits 0, non-numeric flags are rejected instead of becoming `NaN` timeouts, `--wait-timeout` is documented, and page-derived output (`EVAL`, `PAGE_ERRORS`) is fenced as untrusted content.
+
+#### For contributors
+- `test/aside-driver.test.ts` pins the contract's load-bearing sentences and asserts every browsing skill carries `## BROWSER SETUP (Aside` followed by `## Browser fallback`. `test/aside-render.test.ts` pins the renderer's option mapping and script shapes and runs a live render on each engine that is present. `test/helpers/aside-available.ts` is the shared live-Aside probe for E2E gating; `make-pdf/test/e2e/browser-available.ts` gates the make-pdf gates on either engine.
+- `lib/claude-bin.ts` and `lib/error-handling.ts` are now the canonical copies; `browse/src` re-exports them.
+- New free tests pin the review fixes: `test/setup-prune-stale-generated.test.ts` (host cleanup after the generator pruned, symlink targets survive, renamed skills, foreign links), `test/setup-browser-hint.test.ts` (hint and bootstrap summary across Aside present/absent, bootstrap ok/failed, skip-env), `test/setup-needs-build.test.ts`, `test/zstack-render-cli.test.ts`, `test/aside-render.test.ts` (fake `aside`/`browse` executables: probe classification, stdout contract, server policy, failure paths, timeout kill, engine choice and mid-run fallback), `make-pdf/test/cli-exit-codes.test.ts`, `make-pdf/test/setup-smoke.test.ts`. `renderPdf` returns the engine that rendered; `pickEngine(fresh, deps)` and `serveDir` are exported test seams.
+- Size budget re-baselined to `parity-baseline-v1.81.0.0.json` (the Aside contract plus fallback block ride in every browsing skill); parity ceilings ratcheted with measured values; touchfiles, tiers, coverage matrix, eval baselines, ship goldens, and the context-budget fixture refreshed. Follow-ups in TODOS.md: keep the `$B` translation table in sync with the cookbook, Aside CLI 1.26 lacks the commands its own skill doc lists, a macOS runner for the live E2E, an optional MCP path for a persistent page.
+
+## [1.80.0.0] - 2026-09-04
+
+**Setup finishes even when Chromium cannot be installed.**
+**zstack never deletes or overwrites a skill it did not create.**
+
+Three defects that a downstream fork kept tripping over are fixed at the source. `./setup` used to abort at the Playwright step on any box where the Chromium download failed or hung (offline, proxied, AppArmor-restricted), and because that step ran before skills were registered, those users ended with zero skills. The `/freeze` deny hook read a different state directory than `/freeze` wrote whenever `ZSTACK_HOME` was set, so the boundary silently allowed everything. And both `./setup` and `zstack-relink` would replace or delete any skill entry that happened to share a name with a zstack skill, including a skill you wrote yourself.
+
+Now the Chromium install is best-effort and bounded. It runs under a 600 second deadline you can change with `ZSTACK_PLAYWRIGHT_INSTALL_TIMEOUT`, skip outright with `ZSTACK_SKIP_PLAYWRIGHT=1`, and every failure becomes a reason code in the final summary that names the skills that need a browser. Skills always register. Both PreToolUse hooks resolve the same state root the writers use, and freeze fails closed on any unexpected death instead of exiting with no decision. Ownership is proven, never assumed from a name: an entry is only touched when it is a symlink into zstack, carries the `.zstack-owned` marker zstack writes for directories it creates, or is a real file zstack generated. Even then a generated file you have since customized is moved to `~/.zstack/backups/skills/<timestamp>/` before zstack links over it, and a directory is only removed whole when nothing of yours is inside.
+
+### The numbers that matter
+
+Source: the free suite (`bun run test`), specifically `test/setup-playwright-best-effort.test.ts`, `test/setup-link-ownership.test.ts`, `test/relink.test.ts` and `test/hook-scripts.test.ts`, run against this tree.
+
+| Metric | Before | After | Δ |
+|---|---|---|---|
+| Skills registered when the Chromium download fails or hangs | 0 | all | setup never aborts at the bootstrap |
+| Longest a wedged Chromium install can block `./setup` | unbounded | 600s default | `ZSTACK_PLAYWRIGHT_INSTALL_TIMEOUT`, `ZSTACK_SKIP_PLAYWRIGHT=1` |
+| `/freeze` boundary with `ZSTACK_HOME` set | allowed every edit | denies | one state-root resolver for hooks and writers |
+| Sites that could delete or replace a same-name skill without proof of ownership | 5 | 0 | setup linker, alias installer, both flip cleanups, relink |
+| Data lost when zstack replaces a generated SKILL.md you customized | the file | none | moved to `~/.zstack/backups/skills/<ts>/` |
+| Free tests pinning these behaviors | 0 | 103 | across 10 files |
+
+The first row is the one you feel: a laptop on hotel wifi, a CI runner behind a proxy, or a fresh Ubuntu 24.04 box now ends `./setup` with every skill installed and one clear line saying which ones will not work until Chromium is present.
+
+What this means for anyone installing or upgrading: run `./setup` anywhere and get skills. Keep your own `qa` or `ship` skill next to zstack's and it survives every upgrade and prefix flip, reported by name instead of silently replaced. Set `ZSTACK_HOME` and `/freeze` means what it says.
+
+### Itemized changes
+
+#### Fixed
+- **`./setup` no longer aborts when Chromium cannot be installed** (#1900, #1901, #1902, #913). The Playwright step is best-effort and bounded. Reason codes: `skipped`, `chromium-install`, `chromium-install-timeout`, `chromium-install-locked`, `windows-no-node`, `windows-node-modules`, `post-install-launch`. A wedged installer is killed with its whole child tree (pgrep, or a /proc walk where pgrep is missing); Ctrl-C mid-install kills it too. A stale install lock is reclaimed atomically, a garbage pid file counts as stale, and a lock with no recorded holder expires after the install bound. Contributed by @DavidMiserak (#2233).
+- **`/freeze` enforces its boundary under `ZSTACK_HOME`** (#1459). The hook resolves the state root exactly as `bin/zstack-paths` does (ZSTACK_HOME, then CLAUDE_PLUGIN_DATA only when CLAUDE_PLUGIN_ROOT names zstack, then `~/.zstack`), a trailing newline in the path round-trips, a helper from an older install denies instead of exiting 127, and an EXIT backstop denies on any unexpected failure. `/careful` reads its project patterns from the same root and falls back safely on a stale helper. Contributed by @NikhileshNanduri (#1509).
+- **zstack never deletes or links over a skill it does not own** (#2119). `./setup`'s linker and alias installer, both prefix-flip cleanups, and `zstack-relink` all prove ownership first and report a foreign entry by name in the final summary. Runtime assets (sections, templates, checklists) inside a directory zstack did not create are kept, not replaced. A checkout named without a `zstack` path segment (a `git worktree add ../zstack-feature`) still counts as zstack's. Contributed by @smblight.
+- **Windows copy installs carry a `.zstack-owned` marker** so provenance no longer rests on the directory name. The marker is written on every platform, only for directories zstack creates.
+- **Setup's one-shot telemetry events no longer finalize other sessions' in-flight markers** as `outcome: unknown`.
+
+#### Added
+- `ZSTACK_PLAYWRIGHT_INSTALL_TIMEOUT=<seconds>` and `ZSTACK_SKIP_PLAYWRIGHT=1` for `./setup`; documented in the README troubleshooting list together with `ZSTACK_CHROMIUM_NO_SANDBOX=1`.
+- A final setup summary that names the browser-dependent skills when Chromium is unavailable, lists any same-name skills left untouched, and reports any customized SKILL.md moved to `~/.zstack/backups/skills/<timestamp>/`.
+- `zstack-telemetry-log --no-sweep` for events that own no session.
+
+#### For contributors
+- The time-attack fork evaluation that surfaced these defects is preserved under `docs/designs/fork-port-residual-2026-09/` (report, residual index, refutation verdicts, hashes). Waves B through E2 of that plan are scheduled work.
+- New free tests: `test/setup-link-ownership.test.ts`, plus large additions to `test/setup-playwright-best-effort.test.ts`, `test/relink.test.ts`, `test/hook-scripts.test.ts`, `test/telemetry.test.ts`. Anchor-sliced harnesses now fail loudly on `command not found` instead of degrading into "foreign, skipped".
+- `bin/zstack-relink` and `setup` carry the same ownership rule in two copies; the shared helper is filed in TODOS.md.
+
 ## [1.79.0.0] - 2026-09-01
 
 **/ship can no longer be stranded by a backgrounded subagent.**

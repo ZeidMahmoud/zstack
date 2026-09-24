@@ -27,6 +27,7 @@ import {
   RETRO_E2E_SECTIONS,
   CODEX_REVIEW_E2E_SECTIONS,
 } from './helpers/skill-fixture';
+import { E2E_TOUCHFILES, GLOBAL_TOUCHFILES, selectTests } from './helpers/touchfiles';
 
 const ROOT = path.resolve(import.meta.dir, '..');
 
@@ -96,6 +97,39 @@ describe('extractSkillSections (synthetic)', () => {
     expect(out).not.toContain('step two body');
   });
 
+  test('a carved step ends the preceding H2 without changing its content', () => {
+    const pointer = '> **STOP.** Before the next step, Read `~/review/sections/next.md` and execute it\n'
+      + '> in full. Do not work from memory — that section is the source of truth for this step.';
+    const file = path.join(tmpDir, 'carved.md');
+    const original = path.join(tmpDir, 'before-carve.md');
+    const source = SYNTHETIC_SKILL.replace('\n## Step 2 — Other', '\n---\n\n## Step 2 — Other');
+    fs.writeFileSync(original, source);
+    fs.writeFileSync(file, source.replace(
+      '\n## Step 2 — Other', `\n${pointer}\n\n---\n\n## Step 2 — Other`,
+    ));
+    expect(extractSkillSections(file, ['Step 1 — Do the thing']))
+      .toBe(extractSkillSections(original, ['Step 1 — Do the thing']));
+    expect(extractSkillSections(file, ['Step 2 — Other']))
+      .toBe(extractSkillSections(original, ['Step 2 — Other']));
+    expect(extractSkillBody(file)).toContain(pointer);
+  });
+
+  test('nested pointers and ordinary STOP quotes remain part of the requested H2', () => {
+    const pointer = '> **STOP.** Before the next step, Read `~/review/sections/next.md` and execute it\n'
+      + '> in full. Do not work from memory — that section is the source of truth for this step.';
+    for (const prose of [
+      `\`\`\`md\n---\n\n${pointer}\n\n---\n\`\`\``,
+      `### Nested step\n\nInstructions for this step.\n\n${pointer}\nContinue this step.`,
+      `---\n\n${pointer.replace('> in full.', '> First,')}\n\n---`,
+    ]) {
+      const file = path.join(tmpDir, 'quoted.md');
+      fs.writeFileSync(file, SYNTHETIC_SKILL.replace('step one body', `step one body\n${prose}`));
+      const out = extractSkillSections(file, ['Step 1 — Do the thing']);
+      expect(out).toContain(prose);
+      expect(out).toContain('step one continues after the fence');
+    }
+  });
+
   test('missing section throws with the section name and the file path', () => {
     expect(() => extractSkillSections(skillDir, ['Step 99 — Renamed'])).toThrow(/Step 99 — Renamed/);
     expect(() => extractSkillSections(skillDir, ['Step 99 — Renamed'])).toThrow(/SKILL\.md/);
@@ -125,6 +159,64 @@ describe('extractSkillBody (synthetic)', () => {
     fs.mkdirSync(bare, { recursive: true });
     fs.writeFileSync(path.join(bare, 'SKILL.md'), '---\nname: bare\n---\n## Only Section\nbody\n');
     expect(() => extractSkillBody(bare)).toThrow(/Preamble \(run first\)/);
+  });
+
+  test('both exact preamble headings preserve the complete intro/scope gate and tail', () => {
+    for (const heading of ['Preamble (run first)', 'Preamble (after scope gate)']) {
+      const file = path.join(tmpDir, 'scoped-body.md');
+      const scope = '## Scope gate\nAnnounce the actual selected plan before any tools.\n\n';
+      const input = SYNTHETIC_SKILL.replace('## Preamble (run first)', scope + `## ${heading}`);
+      fs.writeFileSync(file, input);
+      const out = extractSkillBody(file);
+      const expected = extractSkillBody(skillDir).replace('Invoke text.\n\n', 'Invoke text.\n\n' + scope);
+      expect(out).toBe(expected);
+      expect(out).toContain(scope.trimEnd());
+      expect(out).not.toContain(`## ${heading}`);
+    }
+  });
+
+  test('unknown, missing, duplicated and reversed boundary sections fail loudly', () => {
+    const cases: Array<[string, string, RegExp]> = [
+      ['unknown start', SYNTHETIC_SKILL.replace('Preamble (run first)', 'Preamble (after setup)'), /Preamble/],
+      ['suffixed scoped start', SYNTHETIC_SKILL.replace('Preamble (run first)', 'Preamble (after scope gate) extra'), /Preamble/],
+      ['suffixed old start', SYNTHETIC_SKILL.replace('Preamble (run first)', 'Preamble (run first) extra'), /Preamble/],
+      ['missing footer', SYNTHETIC_SKILL.replace('## Plan Status Footer', '## Renamed Footer'), /Plan Status Footer/],
+      ['suffixed footer', SYNTHETIC_SKILL.replace('## Plan Status Footer', '## Plan Status Footer extra'), /Plan Status Footer/],
+      ['both starts', SYNTHETIC_SKILL.replace('## AskUserQuestion Format', '## Preamble (after scope gate)'), /ambiguous/],
+      ['duplicate start', SYNTHETIC_SKILL.replace('## AskUserQuestion Format', '## Preamble (run first)'), /ambiguous/],
+      ['duplicate footer', SYNTHETIC_SKILL.replace('## Step 2 — Other', '## Plan Status Footer'), /ambiguous/],
+      ['footer before start', SYNTHETIC_SKILL.replace('## Preamble (run first)', '## Plan Status Footer').replace('## Plan Status Footer\nfooter junk', '## Preamble (after scope gate)\nfooter junk'), /precedes/],
+      ['missing tail', SYNTHETIC_SKILL.slice(0, SYNTHETIC_SKILL.indexOf('## Step 1 — Do the thing')), /no content after/],
+    ];
+    for (const [name, input, error] of cases) {
+      const file = path.join(tmpDir, 'invalid-boundaries.md'); fs.writeFileSync(file, input);
+      expect(() => extractSkillBody(file), name).toThrow(error);
+      expect(() => extractSkillBody(file), name).toThrow(/invalid-boundaries\.md/);
+    }
+  });
+
+  test('quoted and fenced boundary examples do not become live section markers', () => {
+    for (const [open, close] of [['```markdown\n', '```\n'], ['~~~markdown\n', '~~~\n']]) {
+      const file = path.join(tmpDir, 'fenced-boundaries.md');
+      const examples = `${open}## Preamble (after scope gate)\n## Plan Status Footer\n${close}> ## Preamble (after scope gate)\n\n`;
+      fs.writeFileSync(file, SYNTHETIC_SKILL.replace('Intro line before any section.', examples + 'Intro line before any section.'));
+      expect(extractSkillBody(file)).toContain(examples.trimEnd());
+      fs.writeFileSync(file, SYNTHETIC_SKILL.replace('## Preamble (run first)\npreamble junk', `${open}## Preamble (after scope gate)\n${close}preamble junk`));
+      expect(() => extractSkillBody(file)).toThrow(/Preamble/);
+    }
+  });
+
+  test('other section extraction keeps its existing prefix matching', () => {
+    const file = path.join(tmpDir, 'section-prefix.md');
+    fs.writeFileSync(file, SYNTHETIC_SKILL.replace('Preamble (run first)', 'Preamble (after scope gate)'));
+    expect(extractSkillSections(file, ['Preamble (after'])).toContain('preamble junk');
+    expect(extractSkillSections(file, ['Step 1'])).toContain('step one continues after the fence');
+  });
+
+  test('the existing global source dependency selects every affected workflow fixture', () => {
+    expect(GLOBAL_TOUCHFILES).toContain('test/helpers/skill-fixture.ts');
+    const selection = selectTests(['test/helpers/skill-fixture.ts'], E2E_TOUCHFILES, GLOBAL_TOUCHFILES);
+    expect(selection.selected.sort()).toEqual(Object.keys(E2E_TOUCHFILES).sort());
   });
 });
 
@@ -164,6 +256,8 @@ describe('real-skill pins: section lists used by E2E fixtures', () => {
     // Drops the shared preamble and the untested workflow tail.
     expect(out).not.toContain('## Telemetry (run last)');
     expect(out).not.toContain('## Step 5: Fix-First Review');
+    expect(out).not.toContain('review/sections/review-army.md');
+    expect(out).toContain('Enum & Value Completeness requires reading code OUTSIDE the diff.');
     // Meaningfully smaller than the source.
     const full = fs.readFileSync(path.join(ROOT, 'review', 'SKILL.md'), 'utf-8');
     expect(out.length).toBeLessThan(full.length * 0.5);
@@ -207,6 +301,8 @@ describe('real-skill pins: section lists used by E2E fixtures', () => {
     expect(out).toContain('### Step 1: Gather');
     expect(out).toContain('### Step 14: Write the Narrative');
     expect(out).not.toContain('## Global Retrospective Mode');
+    expect(out).toContain('Read `~/.claude/skills/zstack/retro/sections/report-format.md` and execute it');
+    expect(out).toContain('After delivering the repo-scoped report, run the following learning capture and result-save steps, then stop.');
     expect(out).not.toContain('## Telemetry (run last)');
 
     const reportFormat = fs.readFileSync(
@@ -236,6 +332,7 @@ describe('real-skill pins: body/head extraction used by E2E fixtures', () => {
     test(`extractSkillBody(${skill}) drops the shared preamble, keeps the flow`, () => {
       const out = extractSkillBody(path.join(ROOT, skill));
       expect(out).not.toContain('## Preamble (run first)');
+      expect(out).not.toContain('## Preamble (after scope gate)');
       expect(out).not.toContain('## Telemetry (run last)');
       const full = fs.readFileSync(path.join(ROOT, skill, 'SKILL.md'), 'utf-8');
       expect(out.length).toBeLessThan(full.length * 0.75);
@@ -245,9 +342,18 @@ describe('real-skill pins: body/head extraction used by E2E fixtures', () => {
 
   test('body extraction keeps the sections the skillify/context E2E tests assert on', () => {
     expect(extractSkillBody(path.join(ROOT, 'skillify'))).toContain('## Step 1 — Provenance guard (D1)');
-    expect(extractSkillBody(path.join(ROOT, 'scrape'))).toContain('## Step 4 — Prototype phase');
+    expect(extractSkillBody(path.join(ROOT, 'scrape'))).toContain('## Step 2 — Refuse mutating intents');
     expect(extractSkillBody(path.join(ROOT, 'context-save'))).toContain('## List flow');
     expect(extractSkillBody(path.join(ROOT, 'context-restore'))).toContain('## If no saved contexts exist');
+  });
+
+  test('the scoped Eng render retains its original scope gate before the workflow', () => {
+    const file = path.join(ROOT, 'plan-eng-review', 'SKILL.md');
+    const full = fs.readFileSync(file, 'utf-8');
+    const scopeStart = full.indexOf('## Scope gate');
+    const preamble = full.indexOf('## Preamble (after scope gate)');
+    expect(scopeStart).toBeGreaterThan(0); expect(preamble).toBeGreaterThan(scopeStart);
+    expect(extractSkillBody(file)).toContain(full.slice(scopeStart, preamble).trimEnd());
   });
 
   // The union of skills installed by the routing + opus-47 discovery fixtures.
@@ -271,4 +377,39 @@ describe('real-skill pins: body/head extraction used by E2E fixtures', () => {
       expect(out.split('\n').length).toBeLessThan(Math.min(150, fullLines));
     }
   });
+});
+
+// Execute only the actual installation function, never the paid module setup.
+test('routing catalog contains installed project names without a request-to-skill answer key', () => {
+  const source = fs.readFileSync(path.join(ROOT, 'test/skill-routing-e2e.test.ts'), 'utf8');
+  const start = source.indexOf('function installSkills(tmpDir: string)');
+  const end = source.indexOf('/** Init a git repo', start);
+  expect(start).toBeGreaterThan(0); expect(end).toBeGreaterThan(start);
+  const installed = new Map<string, string>([
+    [path.join(ROOT, 'SKILL.md'), '---\nname: zstack\ndescription: Route project workflows.\n---\n'],
+    [path.join(ROOT, 'review/SKILL.md'), '---\nname: review\ndescription: Deliberately unrelated photography text.\n---\n'],
+    [path.join(ROOT, 'qa/SKILL.md'), '---\nname: qa\ndescription: Test browser flows.\n---\n'],
+  ]);
+  const writes = new Map<string, string>();
+  const fixtureRoot = path.join(os.tmpdir(), 'routing-catalog-no-files-written');
+  const mockFs = {
+    existsSync: (file: string) => installed.has(file),
+    mkdirSync: () => {},
+    writeFileSync: (file: string, content: string) => writes.set(file, content),
+  };
+  const compiled = new Bun.Transpiler({ loader: 'ts' }).transformSync(source.slice(start, end) + '\ninstallSkills(fixtureRoot);');
+  new Function('ROOT', 'fs', 'path', 'extractSkillHead', 'fixtureRoot', compiled)(
+    ROOT, mockFs, path, (file: string) => installed.get(file), fixtureRoot,
+  );
+  const instructions = writes.get(path.join(fixtureRoot, 'CLAUDE.md'))!;
+  expect(instructions).toContain('installed zstack skills: zstack, qa, review.');
+  expect(instructions).toContain("built-in skills are outside this project's workflow");
+  expect(instructions).toContain('matching the request to the skill descriptions');
+  expect(instructions).not.toContain('photography');
+  expect(instructions).not.toContain('code-review');
+  expect(instructions).not.toContain('ship');
+  expect(instructions).not.toContain("I'm about to merge");
+  expect(writes.get(path.join(fixtureRoot, '.claude/skills/review/SKILL.md')))
+    .toBe(installed.get(path.join(ROOT, 'review/SKILL.md')));
+  expect(writes.size).toBe(4);
 });

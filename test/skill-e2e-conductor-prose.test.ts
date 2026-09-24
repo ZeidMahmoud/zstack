@@ -47,6 +47,9 @@ describeE2E('Conductor renders decisions as prose (periodic)', () => {
       extraArgs: ['--disallowedTools', 'AskUserQuestion'],
       env: { CONDUCTOR_WORKSPACE_PATH: '/tmp/conductor-prose-e2e' },
       initialPlanContent: FLAWED_PLAN,
+      // A judge can mistake a streaming partial option for a waiting brief.
+      // Keep observing until the independent prose evidence is available.
+      requireProseEvidence: true,
       timeoutMs: CAPTURE_MS,
     });
 
@@ -65,6 +68,9 @@ describeE2E('Conductor renders decisions as prose (periodic)', () => {
       );
     }
     // A prose-rendered decision brief was observed at some point in the run.
-    expect(obs.proseAUQEverObserved).toBe(true);
+    expect(obs.proseAUQEverObserved,
+      `Conductor prose decision not observed: outcome=${obs.outcome}\n` +
+      `summary: ${obs.summary}\n--- evidence ---\n${obs.evidence}`,
+    ).toBe(true);
   }, CAPTURE_LONG_MS);
 });

@@ -25,7 +25,7 @@ gbrain:
   context_queries:
     - id: prior-approved-variants
       kind: filesystem
-      glob: "~/.zstack/projects/{repo_slug}/designs/*/approved.json"
+      glob: "{zstack_state_root}/projects/{repo_slug}/designs/*/approved.json"
       sort: mtime_desc
       limit: 5
       render_as: "## Prior approved design variants for this project"
@@ -66,8 +66,9 @@ Check for prior design exploration sessions for this project:
 
 ```bash
 eval "$(~/.claude/skills/zstack/bin/zstack-slug 2>/dev/null)"
+eval "$(~/.claude/skills/zstack/bin/zstack-paths)"
 setopt +o nomatch 2>/dev/null || true
-_PREV=$(find ~/.zstack/projects/$SLUG/designs/ -name "approved.json" -maxdepth 2 2>/dev/null | sort -r | head -5)
+_PREV=$(find "$ZSTACK_STATE_ROOT/projects/$SLUG/designs/" -name "approved.json" -maxdepth 2 2>/dev/null | sort -r | head -5)
 [ -n "$_PREV" ] && echo "PREVIOUS_SESSIONS_FOUND" || echo "NO_PREVIOUS_SESSIONS"
 echo "$_PREV"
 ```
@@ -111,7 +112,10 @@ When run standalone, gather context to build a proper design brief.
 
 ```bash
 cat DESIGN.md 2>/dev/null | head -80 || echo "NO_DESIGN_MD"
+cat PRODUCT.md 2>/dev/null | head -120 || echo "NO_PRODUCT_MD"
 ```
+
+A `PRODUCT.md` (impeccable's product-context file) answers the job-to-be-done and audience questions: confirm, do not re-ask. Never open `.claude/skills/impeccable/**`.
 
 ```bash
 ls src/ app/ pages/ components/ 2>/dev/null | head -30
@@ -132,9 +136,11 @@ design-shotgun will follow your lead, but won't diverge by default."
 curl -s -o /dev/null -w "%{http_code}" http://localhost:3000 2>/dev/null || echo "NO_LOCAL_SITE"
 ```
 
-If a local site is running AND the user referenced a URL or said something like "I don't
-like how this looks," screenshot the current page and use `$D evolve` instead of
-`$D variants` to generate improvement variants from the existing design.
+If the user referenced a URL or said something like "I don't like how this looks,"
+screenshot that page with Aside in Step 3c and use `$D evolve` instead of `$D variants`
+to generate improvement variants from the existing design. If they didn't name the URL,
+ask for it — never guess which page they mean. If the probe above printed `200`, offer
+`http://localhost:3000` as the default in the AskUserQuestion below (still ask — never assume).
 
 **AskUserQuestion with pre-filled context:** Pre-fill what you inferred from the codebase,
 DESIGN.md, and office-hours output. Then ask for what's missing. Frame as ONE question
@@ -158,8 +164,10 @@ designs to bias generation toward the user's demonstrated taste.
 **Per-session approved.json files (legacy, still supported):**
 
 ```bash
+eval "$(~/.claude/skills/zstack/bin/zstack-slug 2>/dev/null)"
+eval "$(~/.claude/skills/zstack/bin/zstack-paths)"
 setopt +o nomatch 2>/dev/null || true
-_TASTE=$(find ~/.zstack/projects/$SLUG/designs/ -name "approved.json" -maxdepth 2 2>/dev/null | sort -r | head -10)
+_TASTE=$(find "$ZSTACK_STATE_ROOT/projects/$SLUG/designs/" -name "approved.json" -maxdepth 2 2>/dev/null | sort -r | head -10)
 ```
 
 If prior sessions exist, read each `approved.json` and extract patterns from the
@@ -180,7 +188,8 @@ Set up the output directory:
 
 ```bash
 eval "$(~/.claude/skills/zstack/bin/zstack-slug 2>/dev/null)"
-_DESIGN_DIR="$HOME/.zstack/projects/$SLUG/designs/<screen-name>-$(date +%Y%m%d)"
+eval "$(~/.claude/skills/zstack/bin/zstack-paths)"
+_DESIGN_DIR="$ZSTACK_STATE_ROOT/projects/$SLUG/designs/<screen-name>-$(date +%Y%m%d)"
 mkdir -p "$_DESIGN_DIR"
 echo "DESIGN_DIR: $_DESIGN_DIR"
 ```
@@ -232,11 +241,20 @@ If D: drop specified concepts, re-present, re-confirm.
 ### Step 3c: Parallel Generation
 
 **If evolving from a screenshot** (user said "I don't like THIS"), take ONE screenshot
-first:
+of the page the user named, in Aside (PNG — `$D evolve` reads PNG):
 
 ```bash
-$B screenshot "$_DESIGN_DIR/current.png"
+aside repl '
+const pg = await openTab("<url>");
+await pg.screenshot({ path: "current.png", type: "png", fullPage: true });
+console.log("ASIDE_DIR=" + pwd);
+await closeTab(pg);
+console.log("ZSTACK_STEP_OK");
+'
 ```
+
+Then `cp "<ASIDE_DIR>/current.png" "$_DESIGN_DIR/current.png"` and Read it so the user
+sees what you're evolving from.
 
 **Launch N Agent subagents in a single message** (parallel execution). Use the Agent
 tool with `subagent_type: "general-purpose"` and `run_in_background: false` for each
@@ -343,8 +361,9 @@ If standalone, offer next steps via AskUserQuestion:
 
 ## Important Rules
 
-1. **Never save to `.context/`, `docs/designs/`, or `/tmp/`.** All design artifacts go
-   to `~/.zstack/projects/$SLUG/designs/`. This is enforced. See DESIGN_SETUP above.
+1. **Use the configured state root.** All design artifacts go to
+   `$ZSTACK_STATE_ROOT/projects/$SLUG/designs/`, even when that root is temporary.
+   Do not substitute `.context/`, `docs/designs/`, or an arbitrary `/tmp/` path. See DESIGN_SETUP above.
 2. **Show variants inline before opening the board.** The user should see designs
    immediately in their terminal. The browser board is for detailed feedback.
 3. **Confirm feedback before saving.** Always summarize what you understood and verify.

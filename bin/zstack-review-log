@@ -2,27 +2,31 @@
 # zstack-review-log — atomically log a review result
 # Usage: zstack-review-log '{"skill":"...","timestamp":"...","status":"..."}'
 #
-# Binding fields (content-addressed staleness): every appended record is
-# stamped with commit_full, tree, dirty (informational) and wtree (the GATING
-# working-tree fingerprint from bin/zstack-wtree). These are computed
-# AUTHORITATIVELY here — caller-supplied values for the four keys are ignored,
-# so a stale rendered template (or a forged field) cannot bind a record to
-# content it wasn't made on. All other caller fields pass through untouched.
-# Outside a git repo the fields are simply omitted (legacy consumers fall back
-# to their heuristics).
-#
-# Known limitation: binding happens at LOG time, not review-START time — edits
-# made between finishing a review and logging it (including fixes the review
-# itself applied) are certified by the stamped fingerprint. zstack-evidence
-# closes this window for test runs (before/after capture); review flows log
-# immediately after reviewing, which keeps the window small but nonzero.
+# Before reading a diff: zstack-review-log --start review
+# After that pass: zstack-review-log '{...,"completed":true,"converged":true}' --finish TOKEN
+# Diff reviews get wtree only from a consumed, matching start capture on an
+# unchanged tree. Completion/convergence are reviewer-reported, not proof that
+# a model read the code. Caller-supplied binding fields are always discarded.
+# Plan-tier rows retain their legacy binding behavior.
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 eval "$("$SCRIPT_DIR/zstack-slug" 2>/dev/null)"
 ZSTACK_HOME="${ZSTACK_HOME:-$HOME/.zstack}"
 mkdir -p "$ZSTACK_HOME/projects/$SLUG"
 
-INPUT="$1"
+INPUT="${1:-}"
+export ZSTACK_REVIEW_DIR="$ZSTACK_HOME/projects/$SLUG"
+export ZSTACK_REVIEW_REPO="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+export ZSTACK_REVIEW_BRANCH="$(git symbolic-ref --short HEAD 2>/dev/null || git rev-parse HEAD 2>/dev/null || true)"
+export ZSTACK_REVIEW_LIB="$SCRIPT_DIR/../lib/review-evidence.ts"
+case "$(uname -s)" in
+  MINGW*|MSYS*|CYGWIN*)
+    if command -v cygpath >/dev/null 2>&1; then
+      ZSTACK_REVIEW_LIB="$(cygpath -m "$ZSTACK_REVIEW_LIB")"
+      ZSTACK_REVIEW_DIR="$(cygpath -m "$ZSTACK_REVIEW_DIR")"
+    fi
+    ;;
+esac
 
 # Compute binding fields (best-effort; empty outside a git repo).
 COMMIT_FULL=$(git rev-parse HEAD 2>/dev/null || true)
@@ -39,17 +43,26 @@ if [ -n "$COMMIT_FULL" ]; then
   fi
 fi
 
+export ZSTACK_STAMP_COMMIT_FULL="$COMMIT_FULL" ZSTACK_STAMP_TREE="$TREE" ZSTACK_STAMP_WTREE="$WTREE" ZSTACK_STAMP_DIRTY="$DIRTY"
+if [ "$INPUT" = --start ]; then
+  ZSTACK_REVIEW_SKILL="${2:-}" bun -e '
+    const { captureReviewStart } = await import(process.env.ZSTACK_REVIEW_LIB);
+    console.log(captureReviewStart(process.env.ZSTACK_REVIEW_SKILL));
+  '
+  exit $?
+fi
+if [ "$#" -ne 1 ] && { [ "$#" -ne 3 ] || [ "${2:-}" != --finish ]; }; then
+  echo 'Usage: zstack-review-log JSON [--finish TOKEN] | --start SKILL' >&2
+  exit 1
+fi
+
 # Validate (reject malformed or injection attempts) AND stamp in one pass.
 # Caller values for the binding keys are dropped before stamping.
-STAMPED=$(printf '%s' "$INPUT" | ZSTACK_STAMP_COMMIT_FULL="$COMMIT_FULL" ZSTACK_STAMP_TREE="$TREE" ZSTACK_STAMP_WTREE="$WTREE" ZSTACK_STAMP_DIRTY="$DIRTY" bun -e "
+STAMPED=$(printf '%s' "$INPUT" | ZSTACK_REVIEW_TOKEN="${3:-}" bun -e "
+const { bindReview } = await import(process.env.ZSTACK_REVIEW_LIB);
 const rec = JSON.parse(await Bun.stdin.text());
-for (const k of ['commit_full', 'tree', 'wtree', 'dirty']) delete rec[k];
-const env = process.env;
-if (env.ZSTACK_STAMP_COMMIT_FULL) rec.commit_full = env.ZSTACK_STAMP_COMMIT_FULL;
-if (env.ZSTACK_STAMP_TREE) rec.tree = env.ZSTACK_STAMP_TREE;
-if (env.ZSTACK_STAMP_WTREE) rec.wtree = env.ZSTACK_STAMP_WTREE;
-if (env.ZSTACK_STAMP_DIRTY) rec.dirty = env.ZSTACK_STAMP_DIRTY === 'true';
-console.log(JSON.stringify(rec));
+if (!rec || Array.isArray(rec) || typeof rec !== 'object') throw new Error('expected object');
+console.log(JSON.stringify(bindReview(rec, process.env.ZSTACK_REVIEW_TOKEN)));
 " 2>/dev/null) || {
   # Not valid JSON — refuse to append
   echo "zstack-review-log: invalid JSON, skipping" >&2

@@ -121,6 +121,10 @@ export function normalizeWithMap(input: string): {
   normalized: string;
   map: number[];
 } {
+  return normalizeOriginal(input);
+}
+
+function normalizeOriginal(input: string, spanEnds?: number[]): { normalized: string; map: number[] } {
   const out: string[] = [];
   const map: number[] = [];
   let i = 0;
@@ -133,6 +137,7 @@ export function normalizeWithMap(input: string): {
         for (const ch of rep) {
           out.push(ch);
           map.push(i);
+          spanEnds?.push(i + ent.length);
         }
         i += ent.length;
         matchedEntity = true;
@@ -150,9 +155,10 @@ export function normalizeWithMap(input: string): {
     ZERO_WIDTH.lastIndex = 0;
 
     const norm = ch.normalize("NFKC");
-    for (const nch of norm) {
-      out.push(nch);
+    for (let j = 0; j < norm.length; j++) {
+      out.push(norm[j]);
       map.push(i);
+      spanEnds?.push(i + 1);
     }
     i += 1;
   }
@@ -163,18 +169,28 @@ export function normalizeWithMap(input: string): {
 
 // ── Offset → line/col on the ORIGINAL text ────────────────────────────────────
 
-function lineColAt(original: string, offset: number): { line: number; col: number } {
-  let line = 1;
-  let col = 1;
-  for (let i = 0; i < offset && i < original.length; i++) {
-    if (original[i] === "\n") {
-      line += 1;
-      col = 1;
-    } else {
-      col += 1;
-    }
+/** Start offset of every line, built once per scan and only when a finding needs it. */
+function lineStarts(original: string): number[] {
+  const starts = [0];
+  for (let i = 0; i < original.length; i++) if (original[i] === "\n") starts.push(i + 1);
+  return starts;
+}
+
+/**
+ * Binary search over lineStarts: O(log lines) per finding. The previous walk
+ * from offset 0 per finding made a match-dense input (a pasted log full of
+ * emails and IPs) cost O(findings x bytes) — seconds for a few hundred KiB.
+ */
+function lineColAt(starts: number[], original: string, offset: number): { line: number; col: number } {
+  const at = Math.min(Math.max(0, offset), original.length);
+  let lo = 0;
+  let hi = starts.length - 1;
+  while (lo < hi) {
+    const mid = (lo + hi + 1) >> 1;
+    if (starts[mid] <= at) lo = mid;
+    else hi = mid - 1;
   }
-  return { line, col };
+  return { line: lo + 1, col: at - starts[lo] + 1 };
 }
 
 // ── Safe preview masking ──────────────────────────────────────────────────────
@@ -317,7 +333,14 @@ function emailAllowed(
 // ── The scan ──────────────────────────────────────────────────────────────────
 
 export function scan(input: string, opts: ScanOptions = {}): ScanResult {
+  return scanInternal(input, opts);
+}
+
+type OriginalSpan = { start: number; end: number };
+
+function scanInternal(input: string, opts: ScanOptions, spans?: Map<Finding, OriginalSpan>): ScanResult {
   const repoVisibility: RepoVisibility = opts.repoVisibility ?? "unknown";
+  let starts: number[] | null = null; // line index, built on the first finding
   // #1824: ?? only catches null/undefined, not NaN or <= 0. A bad value
   // (NaN from a malformed --max-bytes, or a negative) would make `byteLen >
   // maxBytes` always false and silently disable the fail-closed oversize guard.
@@ -352,7 +375,8 @@ export function scan(input: string, opts: ScanOptions = {}): ScanResult {
     };
   }
 
-  const { normalized, map } = normalizeWithMap(input);
+  const spanEnds: number[] | undefined = spans ? [] : undefined;
+  const { normalized, map } = normalizeOriginal(input, spanEnds);
   const fenceRanges = toolFenceRanges(normalized);
   const allow = new Set(opts.allowlist ?? []);
 
@@ -368,8 +392,7 @@ export function scan(input: string, opts: ScanOptions = {}): ScanResult {
       if (m.index === re.lastIndex) re.lastIndex++;
 
       const span = m[1] ?? m[0];
-      const spanStartInMatch = m[1] !== undefined ? m[0].indexOf(m[1]) : 0;
-      const normOffset = m.index + Math.max(0, spanStartInMatch);
+      const normOffset = m.indices?.[1]?.[0] ?? m.index;
 
       // Per-span placeholder suppression.
       if (isPlaceholderSpan(span)) continue;
@@ -395,7 +418,8 @@ export function scan(input: string, opts: ScanOptions = {}): ScanResult {
       if (seen.has(key)) continue;
       seen.add(key);
 
-      const { line, col } = lineColAt(input, origOffset);
+      starts ??= lineStarts(input);
+      const { line, col } = lineColAt(starts, input, origOffset);
 
       // Tool-fence degrade: only credential-category, only obvious doc examples.
       let severity: Severity = pat.tier;
@@ -409,7 +433,7 @@ export function scan(input: string, opts: ScanOptions = {}): ScanResult {
         toolFenceDegraded = true;
       }
 
-      findings.push({
+      const finding: Finding = {
         id: pat.id,
         tier: pat.tier,
         severity,
@@ -421,7 +445,12 @@ export function scan(input: string, opts: ScanOptions = {}): ScanResult {
         autoRedactable: !!pat.autoRedactable,
         repoVisibility,
         ...(toolFenceDegraded ? { toolFenceDegraded } : {}),
-      });
+      };
+      findings.push(finding);
+      if (spans) {
+        const end = spanEnds?.[normOffset + span.length - 1];
+        if (end !== undefined && end > origOffset) spans.set(finding, { start: origOffset, end });
+      }
     }
   }
 
@@ -438,6 +467,7 @@ function withFlags(flags: string): string {
   let f = flags;
   if (!f.includes("g")) f += "g";
   if (!f.includes("m")) f += "m";
+  if (!f.includes("d")) f += "d";
   return f;
 }
 
@@ -463,10 +493,11 @@ export function applyRedactions(
   opts: ScanOptions = {},
 ): RedactResult {
   const ids = new Set(findingIds);
-  const { findings } = scan(input, opts);
+  const spans = new Map<Finding, OriginalSpan>();
+  const { findings } = scanInternal(input, opts, spans);
   const targets = findings
     .filter((f) => ids.has(f.id) && f.autoRedactable)
-    .map((f) => ({ f, ...locateSpan(input, f) }))
+    .map((f) => ({ f, ...(spans.get(f) ?? { start: -1, end: -1 }) }))
     .filter((t) => t.start >= 0);
 
   // Right-to-left so earlier offsets remain valid after splicing.
@@ -516,9 +547,10 @@ const MARKER_ONLY_PATTERN_IDS = new Set(["pem.private_key", "gcp.service_account
  * structure-preserving path.)
  */
 export function redactFindingSpans(input: string, opts: ScanOptions = {}): string | null {
-  const { findings } = scan(input, opts);
+  const spans = new Map<Finding, OriginalSpan>();
+  const { findings } = scanInternal(input, opts, spans);
   if (findings.some((f) => MARKER_ONLY_PATTERN_IDS.has(f.id))) return null;
-  const targets = findings.map((f) => ({ f, ...locateSpan(input, f) }));
+  const targets = findings.map((f) => ({ f, ...(spans.get(f) ?? { start: -1, end: -1 }) }));
   if (targets.some((t) => t.start < 0)) return null;
 
   // Coalesce overlapping/touching ranges — splicing two intersecting spans
@@ -543,26 +575,6 @@ export function redactFindingSpans(input: string, opts: ScanOptions = {}): strin
     body = body.slice(0, m.start) + `<REDACTED-${m.ids.join("+")}>` + body.slice(m.end);
   }
   return body;
-}
-
-function locateSpan(input: string, f: Finding): { start: number; end: number } {
-  // Re-derive the offset from line/col on the original text.
-  let offset = 0;
-  let line = 1;
-  while (line < f.line && offset < input.length) {
-    if (input[offset] === "\n") line++;
-    offset++;
-  }
-  offset += f.col - 1;
-  const pat = PATTERNS_BY_ID[f.id];
-  if (!pat) return { start: -1, end: -1 };
-  const re = new RegExp(pat.regex.source, withFlags(pat.regex.flags));
-  re.lastIndex = Math.max(0, offset - 2);
-  const m = re.exec(input);
-  if (!m) return { start: -1, end: -1 };
-  const span = m[1] ?? m[0];
-  const start = m.index + (m[1] !== undefined ? m[0].indexOf(m[1]) : 0);
-  return { start, end: start + span.length };
 }
 
 function inStructuralToken(body: string, start: number, end: number): boolean {

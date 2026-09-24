@@ -14,10 +14,13 @@
 #        zstack-settings-hook add-event --event <name — see the validator in add-event> \
 #          --command <cmd> --source <tag> [--matcher <regex>] [--timeout <s>]
 #        zstack-settings-hook ensure-event --event ... --command ... --source ... [--matcher ...] [--timeout <s>]
-#        zstack-settings-hook remove-source --source <tag>
+#        zstack-settings-hook remove-source --source <tag>   # removes items the table identifies as <tag>'s, tagged or not
 #        zstack-settings-hook diff-event   --event ... --command ... --source ... [--matcher ...]
 #        zstack-settings-hook rollback     # restore latest backup (single-step undo)
 #        zstack-settings-hook list-sources # show all zstack-tagged hook entries
+#        zstack-settings-hook list-items --event <name> [--owned-by <tag>] [--command-regex <js-re>]
+#                                          # read-only: one JSON string literal per matching hook COMMAND
+#                                          # (identity via KNOWN_HOOKS, never the tag); empty stdout = none
 #
 #   3. Self-heal (phantom-hooks fix):
 #        zstack-settings-hook prune-stale                     # prune dead zstack hook items
@@ -76,11 +79,12 @@ Usage:
   zstack-settings-hook remove <hook-command>          # legacy SessionStart remove
   zstack-settings-hook add-event --event <name> --command <cmd> --source <tag> [--matcher <re>] [--timeout <s>]
   zstack-settings-hook ensure-event --event <name> --command <cmd> --source <tag> [--matcher <re>] [--timeout <s>]
-  zstack-settings-hook remove-source --source <tag>
+  zstack-settings-hook remove-source --source <tag>   # tagged OR table-identified items of <tag>
   zstack-settings-hook diff-event --event <name> --command <cmd> --source <tag> [--matcher <re>] [--timeout <s>]
   zstack-settings-hook prune-stale [--repoint <root>] [--all]
   zstack-settings-hook rollback
   zstack-settings-hook list-sources
+  zstack-settings-hook list-items --event <name> [--owned-by <tag>] [--command-regex <js-re>]
 EOF
   exit 1
 fi
@@ -106,6 +110,10 @@ function gsMain(fn) {
   try {
     fn();
   } catch (e) {
+    if (e && e.zstackUnreadableSettings === true) {
+      process.stderr.write("zstack-settings-hook: " + e.message + " -- refusing to mutate\n");
+      process.exit(3);
+    }
     process.stderr.write("zstack-settings-hook: internal error (" + (e && e.message) + ") -- refusing to mutate\n");
     process.exit(4);
   }
@@ -115,6 +123,7 @@ var KNOWN_HOOKS = {
   "question-preference-hook": { source: "plan-tune-cathedral", event: "PreToolUse",   matcher: "(AskUserQuestion|mcp__.*__AskUserQuestion)", relpath: "hosts/claude/hooks/question-preference-hook" },
   "auq-error-fallback-hook":  { source: "auq-error-fallback",  event: "PostToolUse",  matcher: "(AskUserQuestion|mcp__.*__AskUserQuestion)", relpath: "hosts/claude/hooks/auq-error-fallback-hook" },
   "timeline-stop-hook":       { source: "zstack-timeline-stop", event: "Stop",        matcher: "", relpath: "hosts/claude/hooks/timeline-stop-hook" },
+  "memorable-user-prompt-hook": { source: "zstack-memorable", event: "UserPromptSubmit", matcher: "", relpath: "hosts/claude/hooks/memorable-user-prompt-hook" },
   "zstack-session-update":    { source: "zstack-session-update", event: "SessionStart", matcher: "", relpath: "bin/zstack-session-update" },
   "zstack-verify-gate":       { source: "verify-gate", event: "Stop", matcher: "", relpath: "bin/zstack-verify-gate" }
 };
@@ -155,6 +164,49 @@ function gsWinPath(p) {
     return p.charAt(1) + ":" + p.slice(2);
   }
   return p;
+}
+function gsResolveSettingsPath(input) {
+  var fs = require("fs");
+  var path = require("path");
+  var absolute = path.resolve(gsWinPath(input));
+  var resolved;
+  try { resolved = fs.realpathSync(absolute); }
+  catch (e) {
+    if (e && (e.code === "EACCES" || e.code === "EPERM")) {
+      throw Object.assign(new Error("cannot read " + absolute + " (" + e.code + ")"), { zstackUnreadableSettings: true });
+    }
+    if (!e || e.code !== "ENOENT") throw e;
+    try {
+      if (fs.lstatSync(absolute).isSymbolicLink()) throw new Error("settings link has no target");
+    } catch (missing) {
+      if (!missing || missing.code !== "ENOENT") throw missing;
+    }
+    resolved = path.join(gsResolveSettingsPath(path.dirname(absolute)), path.basename(absolute));
+  }
+  return process.platform === "win32" ? resolved.replace(/\\/g, "/") : resolved;
+}
+function gsAssertSettingsTarget(settingsPath) {
+  if (gsResolveSettingsPath(process.env.ZSTACK_SETTINGS_INPUT) !== settingsPath) {
+    throw new Error("settings target changed while waiting or writing");
+  }
+}
+function gsSettingsIdentity(settingsPath) {
+  var fs = require("fs");
+  try {
+    var stat = fs.lstatSync(settingsPath, { bigint: true });
+    if (!stat.isFile()) throw new Error("settings target is not a regular file");
+    return [stat.dev, stat.ino, stat.size, stat.mode, stat.mtimeNs, stat.ctimeNs].join(":");
+  } catch (e) {
+    if (e && e.code === "ENOENT") return null;
+    throw e;
+  }
+}
+var gsLoadedIdentity;
+function gsAssertSettingsUnchanged(settingsPath) {
+  gsAssertSettingsTarget(settingsPath);
+  if (gsSettingsIdentity(settingsPath) !== gsLoadedIdentity) {
+    throw new Error("settings changed during mutation");
+  }
 }
 function gsIsAlive(cmd) {
   var fs = require("fs");
@@ -209,6 +261,8 @@ function gsRotateBackups(settingsPath, keep) {
 }
 function gsLoadSettings(path) {
   var fs = require("fs");
+  gsAssertSettingsTarget(path);
+  gsLoadedIdentity = gsSettingsIdentity(path);
   var raw = null;
   try { raw = fs.readFileSync(path, "utf8"); }
   catch (e) {
@@ -226,6 +280,7 @@ function gsWriteIfChanged(path, beforeText, settings, existed) {
   var fs = require("fs");
   var afterText = JSON.stringify(settings, null, 2);
   if (afterText === beforeText) return false;
+  gsAssertSettingsUnchanged(path);
   // Preserve the live file mode across the tmp+rename (settings.json can
   // carry API keys in its env block -- a user-tightened 0600 must never be
   // silently broadened to the default 0644). Fresh files start 0600.
@@ -237,12 +292,23 @@ function gsWriteIfChanged(path, beforeText, settings, existed) {
     gsRotateBackups(path, 10);
   }
   var tmp = process.env.ZSTACK_TMP_PATH;
-  fs.writeFileSync(tmp, afterText + "\n");
-  try { fs.chmodSync(tmp, mode); } catch (e) {}
-  fs.renameSync(tmp, path);
+  fs.writeFileSync(tmp, afterText + "\n", { mode: mode, flag: "wx" });
+  try {
+    fs.chmodSync(tmp, mode);
+    gsAssertSettingsUnchanged(path);
+    fs.renameSync(tmp, path);
+  } finally {
+    try { fs.unlinkSync(tmp); } catch (e) { if (e.code !== "ENOENT") throw e; }
+  }
   return true;
 }
 '
+
+ZSTACK_SETTINGS_INPUT="$SETTINGS_FILE"
+export ZSTACK_SETTINGS_INPUT
+SETTINGS_FILE=$(bun -e "$_HOOK_JS_PRELUDE"'gsMain(function () {
+  process.stdout.write(gsResolveSettingsPath(process.env.ZSTACK_SETTINGS_INPUT));
+});') || exit $?
 
 # ─── Mutation lock ────────────────────────────────────────────────────
 # Accepted tradeoffs (adversarial-reviewed): (1) the lock serializes zstack
@@ -597,29 +663,45 @@ case "$ACTION" in
       if (!settings.hooks) { console.log("OK: removed 0 hook entry/entries tagged source=" + source); process.exit(0); }
       const before = JSON.stringify(settings, null, 2);
       let removed = 0;
+      // Identity-aware removal (tag OR table). Claude Code strips the
+      // _zstack_source tag when it rewrites settings.json, so a tag-only
+      // off switch silently no-ops on exactly the entries it was written
+      // for. Decision per item, identity first (D = drop, K = keep):
+      //
+      //   item ->               | row.source == SOURCE | row of another source | no table row
+      //   entry tagged SOURCE   |          D           |          K            | D if single item, else K
+      //   untagged / other tag  |          D           |          K            | K
+      //
+      // Entries with nothing of ours stay byte-identical (tag included);
+      // an entry we emptied is dropped; a tagged entry we trimmed loses
+      // the tag with its last owned item. Callers that need every zstack
+      // item gone still pair this with prune-stale --all.
       for (const event of Object.keys(settings.hooks)) {
+        const entries = settings.hooks[event];
+        if (!Array.isArray(entries)) continue;   // foreign shape: not ours to judge
         const kept = [];
-        for (const entry of settings.hooks[event]) {
-          if (entry._zstack_source !== source) { kept.push(entry); continue; }
-          if (!Array.isArray(entry.hooks) || entry.hooks.length === 0) { removed++; continue; }
-          // Item-aware: remove table-owned items (or the single item of a
-          // tagged legacy-stray entry); foreign items in a tagged multi-item
-          // entry are preserved and the tag is dropped with the last owned item.
+        for (const entry of entries) {
+          const tagged = !!entry && entry._zstack_source === source;
+          if (!entry || !Array.isArray(entry.hooks) || entry.hooks.length === 0) {
+            if (tagged) { removed++; continue; }   // tagged but empty/malformed: legacy stray
+            kept.push(entry); continue;
+          }
           const single = entry.hooks.length === 1;
+          let touched = 0;
           const remain = entry.hooks.filter(h => {
             // Command-less items cannot be ours (zstack only writes
             // type:command items) -- preserve them.
-            const owned = (h && h.command)
-              ? gsOwnedRow(h.command, event, entry.matcher || "") !== null
-              : false;
-            // The single-item stray claim requires a command item (zstack
-            // never writes command-less items).
-            if (owned || (single && h && h.command)) { removed++; return false; }
+            const cmd = (h && typeof h.command === "string") ? h.command : "";
+            const row = cmd ? gsOwnedRow(cmd, event, entry.matcher || "") : null;
+            const ours = !!row && row.source === source;
+            const stray = tagged && single && !!cmd && !row;
+            if (ours || stray) { removed++; touched++; return false; }
             return true;
           });
+          if (touched === 0) { kept.push(entry); continue; }
           if (remain.length === 0) continue;
           entry.hooks = remain;
-          delete entry._zstack_source;
+          if (tagged) delete entry._zstack_source;
           kept.push(entry);
         }
         settings.hooks[event] = kept;
@@ -784,6 +866,7 @@ case "$ACTION" in
     ;;
 
   rollback)
+    _acquire_lock || exit 1
     if [ ! -f "$SETTINGS_FILE.bak-latest" ]; then
       echo "rollback: no backup pointer at $SETTINGS_FILE.bak-latest" >&2
       exit 1
@@ -810,11 +893,84 @@ case "$ACTION" in
       echo "rollback: pointer references missing backup $LATEST" >&2
       exit 1
     fi
-    _acquire_lock || exit 1
-    _RB_TMP="$SETTINGS_FILE.tmp.$$.$RANDOM"
-    cp "$LATEST" "$_RB_TMP"
-    mv "$_RB_TMP" "$SETTINGS_FILE"
+    _mutation_env
+    ZSTACK_SETTINGS_PATH="$SETTINGS_FILE" ZSTACK_RESTORE_PATH="$LATEST" \
+    bun -e "$_HOOK_JS_PRELUDE"'gsMain(function () {
+      var fs = require("fs");
+      var target = process.env.ZSTACK_SETTINGS_PATH;
+      var backup = process.env.ZSTACK_RESTORE_PATH;
+      var tmp = process.env.ZSTACK_TMP_PATH;
+      gsAssertSettingsTarget(target);
+      gsLoadedIdentity = gsSettingsIdentity(target);
+      try {
+        fs.copyFileSync(backup, tmp, fs.constants.COPYFILE_EXCL);
+        gsAssertSettingsUnchanged(target);
+        fs.renameSync(tmp, target);
+      } finally {
+        try { fs.unlinkSync(tmp); } catch (e) { if (e.code !== "ENOENT") throw e; }
+      }
+    });'
     echo "OK: restored $SETTINGS_FILE from $LATEST"
+    ;;
+
+  list-items)
+    # Read-only identity view: one JSON string literal per matching hook
+    # command (JSON.stringify, so a command containing tabs or newlines
+    # cannot split a line), filters applied inside the JS. Empty stdout
+    # means no match. Exit 1 usage, 3 unparseable settings, 4 unexpected
+    # shape -- the same codes the mutating verbs use, because callers
+    # (bin/zstack-memorable) decide mutations from this output.
+    LI_EVENT=""
+    LI_OWNED_BY=""
+    LI_CMD_RE=""
+    shift
+    while [ $# -gt 0 ]; do
+      case "$1" in
+        --event)         LI_EVENT="$2"; shift 2 ;;
+        --owned-by)      LI_OWNED_BY="$2"; shift 2 ;;
+        --command-regex) LI_CMD_RE="$2"; shift 2 ;;
+        *) echo "unknown flag: $1" >&2; exit 1 ;;
+      esac
+    done
+    if [ -z "$LI_EVENT" ]; then
+      echo "list-items requires --event <name>" >&2
+      exit 1
+    fi
+    [ -f "$SETTINGS_FILE" ] || exit 0
+    ZSTACK_SETTINGS_PATH="$SETTINGS_FILE" ZSTACK_LI_EVENT="$LI_EVENT" ZSTACK_LI_OWNED_BY="$LI_OWNED_BY" ZSTACK_LI_CMD_RE="$LI_CMD_RE" bun -e "$_HOOK_JS_PRELUDE"'gsMain(function () {
+      const event = process.env.ZSTACK_LI_EVENT;
+      const ownedBy = process.env.ZSTACK_LI_OWNED_BY || "";
+      const reSrc = process.env.ZSTACK_LI_CMD_RE || "";
+      let re = null;
+      if (reSrc) {
+        try { re = new RegExp(reSrc); }
+        catch (e) {
+          process.stderr.write("list-items: invalid --command-regex (" + e.message + ")\n");
+          process.exit(1);
+        }
+      }
+      const loaded = gsLoadSettings(process.env.ZSTACK_SETTINGS_PATH);
+      const hooks = loaded.settings.hooks || {};
+      const entries = hooks[event];
+      if (entries === undefined || entries === null) process.exit(0);
+      if (!Array.isArray(entries)) throw new Error("hooks." + event + " is not an array");
+      for (const entry of entries) {
+        if (!entry || !Array.isArray(entry.hooks)) continue;   // foreign shape, preserved by prune-stale too
+        for (const h of entry.hooks) {
+          const cmd = (h && typeof h.command === "string") ? h.command : "";
+          if (!cmd) continue;
+          const row = gsOwnedRow(cmd, event, entry.matcher || "");
+          if (ownedBy && (!row || row.source !== ownedBy)) continue;
+          // Alone, the regex only ever sees items no table row owns (the
+          // vendor-own probe). Combined with --owned-by it narrows THAT set:
+          // filters intersect, a regex never widens a selection.
+          if (re && !ownedBy && row) continue;
+          if (re && !re.test(cmd)) continue;
+          console.log(JSON.stringify(cmd));
+        }
+      }
+    });
+    '
     ;;
 
   list-sources)

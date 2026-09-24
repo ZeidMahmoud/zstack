@@ -110,7 +110,7 @@ Published to ClawHub. Install with `clawhub install`:
 
 Source lives in `openclaw/skills/` in the zstack repo. These are hand-crafted
 adaptations of the zstack methodology for OpenClaw's conversational context.
-No zstack infrastructure (no browse, no telemetry, no preamble).
+No zstack infrastructure (no browser, no telemetry, no preamble).
 
 ## Spawned session detection
 

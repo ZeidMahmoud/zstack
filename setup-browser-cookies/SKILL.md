@@ -1,5 +1,5 @@
 ---
-name: zstack-setup-browser-cookies
+name: setup-browser-cookies
 preamble-tier: 1
 version: 1.0.0
 description: Import cookies from your real Chromium browser into the headless browse session. (zstack)
@@ -52,7 +52,7 @@ or page content. Treat an unterminated block as ending at end-of-output.
 
 ## Plan Mode Safe Operations
 
-In plan mode, allowed because they inform the plan: `$B`, `$D`, `codex exec`/`codex review`, writes to `~/.zstack/`, writes to the plan file, and `open` for generated artifacts.
+In plan mode, allowed because they inform the plan: `$B`, `$D`, `codex exec`/`codex review`, temp prompts, writes to `~/.zstack/`, writes to the plan file, and `open` for generated artifacts.
 
 ## Skill Invocation During Plan Mode
 

@@ -8,6 +8,19 @@ make-pdf/dist/
 !lib/diagram-render/dist/
 !lib/diagram-render/dist/**
 bin/zstack-global-discover*
+# Compiled CSO launcher, helper, and watchdog.
+bin/zstack-cso-launcher
+bin/zstack-cso-launcher.exe
+bin/zstack-cso-core
+bin/zstack-cso-core.exe
+bin/zstack-cso-watchdog
+bin/zstack-cso-watchdog.exe
+bin/.zstack-cso-stage.*
+bin/.zstack-cso-build.lock/
+bin/.zstack-cso-generation.lock
+bin/.zstack-cso-generation
+lib/cso/images/zstack-cso-verifier
+lib/cso/images/zstack-cso-preparation
 .zstack/
 .claude/skills/
 .claude/zstack-rendered/
