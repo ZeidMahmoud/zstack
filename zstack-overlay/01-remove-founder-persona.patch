@@ -1,5 +1,5 @@
 diff --git aa/LICENSE b/LICENSE
-index 3502951..c9a0596 100644
+index 35029511..c9a05963 100644
 --- aa/LICENSE
 +++ b/LICENSE
 @@ -1,6 +1,7 @@
@@ -12,19 +12,28 @@ index 3502951..c9a0596 100644
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
 diff --git aa/README.md b/README.md
-index 8bd3c9b..f47d58b 100644
+index 496f7ae4..6afba732 100644
 --- aa/README.md
 +++ b/README.md
-@@ -1,34 +1,25 @@
+@@ -1,34 +1,23 @@
  # zstack
  
 -> "I don't think I've typed like a line of code probably since December, basically, which is an extremely large change." — [Andrej Karpathy](https://fortune.com/2026/03/21/andrej-karpathy-openai-cofounder-ai-agents-coding-state-of-psychosis-openclaw/), No Priors podcast, March 2026
--
++> **zstack** is Zeid Mahmoud's Claude Code skill stack, bundled with the surrounding
++> Claude Code workflow (plugins + installed skills). See [`LICENSE`](LICENSE) for
++> attribution and **[ZSTACK.md](ZSTACK.md)** for how it is built and kept current.
+ 
 -When I heard Karpathy say this, I wanted to find out how. How does one person ship like a team of twenty? Peter Steinberger built [OpenClaw](https://github.com/openclaw/openclaw) — 247K GitHub stars — essentially solo with AI agents. The revolution is here. A single builder with the right tooling can move faster than a traditional team.
++zstack turns Claude Code into a virtual engineering team. Instead of a blank prompt, you
++get a set of specialists you invoke as slash commands: a CEO who rethinks the product, an
++eng manager who locks architecture, a designer who catches AI slop, a reviewer who finds
++production bugs, a QA lead who drives a real browser, a security officer who runs OWASP +
++STRIDE audits, and a release engineer who ships the PR. Two dozen specialists and a handful
++of power tools, all Markdown, all free, MIT license.
+ 
+-I'm [Zeid Mahmoud](https://x.com/zeidmahmoud), President & CEO of [Y Combinator](https://www.ycombinator.com/). I've worked with thousands of startups — Coinbase, Instacart, Rippling — when they were one or two people in a garage. Before YC, I was one of the first eng/PM/designers at Palantir, cofounded Posterous (sold to Twitter), and built Bookface, YC's internal social network.
 -
--I'm [Garry Tan](https://x.com/garrytan), President & CEO of [Y Combinator](https://www.ycombinator.com/). I've worked with thousands of startups — Coinbase, Instacart, Rippling — when they were one or two people in a garage. Before YC, I was one of the first eng/PM/designers at Palantir, cofounded Posterous (sold to Twitter), and built Bookface, YC's internal social network.
--
--**zstack is my answer.** I've been building products for twenty years, and right now I'm shipping more products than I ever have. In the last 60 days: 3 production services, 40+ shipped features, part-time, while running YC full-time. On logical code change — not raw LOC, which AI inflates — my 2026 run rate is **~810× my 2013 pace** (11,417 vs 14 logical lines/day). Year-to-date (through April 18), 2026 has already produced **240× the entire 2013 year**. Measured across 40 public + private `garrytan/*` repos including Bookface, after excluding one demo repo. AI wrote most of it. The point isn't who typed it, it's what shipped.
+-**zstack is my answer.** I've been building products for twenty years, and right now I'm shipping more products than I ever have. In the last 60 days: 3 production services, 40+ shipped features, part-time, while running YC full-time. On logical code change — not raw LOC, which AI inflates — my 2026 run rate is **~810× my 2013 pace** (11,417 vs 14 logical lines/day). Year-to-date (through April 18), 2026 has already produced **240× the entire 2013 year**. Measured across 40 public + private `zeidmahmoud/*` repos including Bookface, after excluding one demo repo. AI wrote most of it. The point isn't who typed it, it's what shipped.
 -
 -> The LOC critics aren't wrong that raw line counts inflate with AI. They are wrong that normalized-for-inflation, I'm less productive. I'm more productive, by a lot. Full methodology, caveats, and reproduction script: **[On the LOC Controversy](docs/ON_THE_LOC_CONTROVERSY.md)**.
 -
@@ -43,19 +52,6 @@ index 8bd3c9b..f47d58b 100644
 -This is my open source software factory. I use it every day. I'm sharing it because these tools should be available to everyone.
 -
 -Fork it. Improve it. Make it yours. And if you want to hate on free open source software — you're welcome to, but I'd rather you just try it first.
-+> **zstack** is a fork of [gstack](https://github.com/garrytan/gstack), rebranded for
-+> personal use and bundled with the surrounding Claude Code workflow (plugins + installed
-+> skills). The original tool, its philosophy, and the founder narrative it shipped with are
-+> the work of the gstack author; see [`LICENSE`](LICENSE) for attribution and **[ZSTACK.md](ZSTACK.md)**
-+> for what changed.
-+
-+zstack turns Claude Code into a virtual engineering team. Instead of a blank prompt, you
-+get a set of specialists you invoke as slash commands: a CEO who rethinks the product, an
-+eng manager who locks architecture, a designer who catches AI slop, a reviewer who finds
-+production bugs, a QA lead who drives a real browser, a security officer who runs OWASP +
-+STRIDE audits, and a release engineer who ships the PR. Two dozen specialists and a handful
-+of power tools, all Markdown, all free, MIT license.
-+
 +The premise is simple: AI has made the marginal cost of doing the *complete* thing close to
 +zero, so the work that pays off now is structured review, real QA, and disciplined release,
 +not just generating code. zstack encodes that discipline as reusable skills.
@@ -68,24 +64,36 @@ index 8bd3c9b..f47d58b 100644
  - **Tech leads and staff engineers** — rigorous review, QA, and release automation on every PR
  
  ## Quick start
+diff --git aa/package.json b/package.json
+index fbffd247..c1147ed3 100644
+--- aa/package.json
++++ b/package.json
+@@ -1,6 +1,6 @@
+ {
+   "name": "zstack",
+-  "version": "1.89.0",
++  "version": "1.89.0.0",
+   "description": "Zeid's Stack — Claude Code skills + fast headless browser. One repo, one install, entire AI engineering workflow.",
+   "license": "MIT",
+   "type": "module",
 diff --git aa/scripts/resolvers/preamble/generate-voice-directive.ts b/scripts/resolvers/preamble/generate-voice-directive.ts
-index de04af9..9cfeca5 100644
+index 81d1e66b..9c96580e 100644
 --- aa/scripts/resolvers/preamble/generate-voice-directive.ts
 +++ b/scripts/resolvers/preamble/generate-voice-directive.ts
-@@ -13,7 +13,7 @@ The user has context you do not. Cross-model agreement is a recommendation, not
+@@ -18,7 +18,7 @@ The user has context you do not. Cross-model agreement is a recommendation, not
  
    return `## Voice
  
--ZStack voice: Garry-shaped product and engineering judgment, compressed for runtime.
+-ZStack voice: Zeid-shaped product and engineering judgment, compressed for runtime.
 +zstack voice: opinionated senior product and engineering judgment, compressed for runtime.
  
  - Lead with the point. Say what it does, why it matters, and what changes for the builder.
  - Be concrete. Name files, functions, line numbers, commands, outputs, evals, and real numbers.
 diff --git aa/zstack/llms.txt b/zstack/llms.txt
-index 5451488..8abe857 100644
+index 0af3445c..38b512b4 100644
 --- aa/zstack/llms.txt
 +++ b/zstack/llms.txt
-@@ -30,8 +30,6 @@ Conventions:
+@@ -31,8 +31,6 @@ Conventions:
  - [/document-generate](document-generate/SKILL.md): Generate missing documentation from scratch for a feature, module, or entire project.
  - [/document-release](document-release/SKILL.md): Post-ship documentation update.
  - [/freeze](freeze/SKILL.md): Restrict file edits to a specific directory for the session.
@@ -94,7 +102,7 @@ index 5451488..8abe857 100644
  - [/guard](guard/SKILL.md): Full safety mode: destructive command warnings + directory-scoped edits.
  - [/health](health/SKILL.md): Code quality dashboard.
  - [/investigate](investigate/SKILL.md): Systematic debugging with root cause investigation.
-@@ -65,6 +63,8 @@ Conventions:
+@@ -66,6 +64,8 @@ Conventions:
  - [/spec](spec/SKILL.md): Turn vague intent into a precise, executable spec in five phases.
  - [/sync-gbrain](sync-gbrain/SKILL.md): Keep gbrain current with this repo's code and refresh agent search guidance in CLAUDE.md.
  - [/unfreeze](unfreeze/SKILL.md): Clear the freeze boundary set by /freeze, allowing edits to all directories again.
