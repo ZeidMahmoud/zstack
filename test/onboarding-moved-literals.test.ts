@@ -20,7 +20,7 @@ const SCRIPT = fs.readFileSync(path.join(ROOT, 'bin', 'zstack-skill-start'), 'ut
 
 /** flow id -> distinctive literal that must live in the script only. */
 const MOVED: Record<string, string> = {
-  'lake-intro': 'https://garryslist.org/posts/boil-the-ocean',
+  'lake-intro': 'https://zeidslist.org/posts/boil-the-ocean',
   'telemetry-prompt': 'Help zstack get better! (recommended)',
   'proactive-prompt': "Turn it off — I'll type /commands myself",
   'first-run-tip': 'Fresh repo — shape it first with',

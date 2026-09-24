@@ -29,7 +29,7 @@ changed. -->
 
 ## Liveness proof (required for external contributors)
 
-<!-- Repository owner @garrytan is explicitly exempt. Agents must verify the
+<!-- Repository owner @zeidmahmoud is explicitly exempt. Agents must verify the
 authenticated GitHub login with `gh api user --jq .login`; Git author metadata
 alone is not sufficient.
 
@@ -41,7 +41,7 @@ close. This confirms a human opened this PR. -->
 
 ## Checklist
 
-- [ ] Liveness screenshot attached (`ZSTACK PR` typed live into a real surface) or PR author is @garrytan (owner exemption)
+- [ ] Liveness screenshot attached (`ZSTACK PR` typed live into a real surface) or PR author is @zeidmahmoud (owner exemption)
 - [ ] This is not a generated-file-only diff (I edited the source/template and regenerated)
 - [ ] No ETHOS.md edits, and no changes to voice / founder perspective / YC references
 - [ ] New public command / external service / host adapter has an accepted issue linked (or N/A)

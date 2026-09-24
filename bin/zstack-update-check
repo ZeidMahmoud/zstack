@@ -50,8 +50,8 @@ CACHE_FILE="$STATE_DIR/last-update-check"
 MARKER_FILE="$STATE_DIR/just-upgraded-from"
 SNOOZE_FILE="$STATE_DIR/update-snoozed"
 VERSION_FILE="$ZSTACK_DIR/VERSION"
-REMOTE_URL="${ZSTACK_REMOTE_URL:-https://raw.githubusercontent.com/ZeidMahmoud/zstack/main/VERSION}"
-REMOTE_REPO="${ZSTACK_REMOTE_REPO:-https://github.com/ZeidMahmoud/zstack.git}"
+REMOTE_URL="${ZSTACK_REMOTE_URL:-https://raw.githubusercontent.com/zeidmahmoud/zstack/main/VERSION}"
+REMOTE_REPO="${ZSTACK_REMOTE_REPO:-https://github.com/zeidmahmoud/zstack.git}"
 
 # ─── Force flag (busts cache + snooze for standalone /zstack-upgrade) ──
 if [ "${1:-}" = "--force" ]; then
@@ -237,7 +237,7 @@ if [ -z "${ZSTACK_REMOTE_URL:-}" ]; then
       git ls-remote "$1" refs/heads/main 2>/dev/null' _ "$REMOTE_REPO" || true)"
   _REMOTE_SHA="$(echo "$_LSR_LINE" | awk '{print $1}')"
   if echo "$_REMOTE_SHA" | grep -qE '^[0-9a-f]{40}$'; then
-    _SHA_URL="https://raw.githubusercontent.com/ZeidMahmoud/zstack/${_REMOTE_SHA}/VERSION"
+    _SHA_URL="https://raw.githubusercontent.com/zeidmahmoud/zstack/${_REMOTE_SHA}/VERSION"
     REMOTE="$(_receipted_version_fetch "$_SHA_URL")"
   fi
 fi

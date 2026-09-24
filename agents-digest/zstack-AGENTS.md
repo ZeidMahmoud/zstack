@@ -1,6 +1,6 @@
 # zstack digest v1.89.0.0 — regenerate/re-copy after upgrading zstack
 
-Behavioral rules from zstack (https://github.com/ZeidMahmoud/zstack), compressed
+Behavioral rules from zstack (https://github.com/zeidmahmoud/zstack), compressed
 for agent hosts without a full skill install. The full skills add workflows,
 reviews, and evals on top of these rules.
 
@@ -30,6 +30,6 @@ corporate tone, no AI vocabulary.
 
 ## Full zstack
 
-Clone https://github.com/ZeidMahmoud/zstack and run `./setup` for the full
+Clone https://github.com/zeidmahmoud/zstack and run `./setup` for the full
 skill suite (reviews, ship, QA, evals). This digest is generated — edit
 scripts/gen-agents-digest.ts, not this file.

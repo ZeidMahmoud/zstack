@@ -16,7 +16,7 @@ import { imageBuildMatrix, type ImageBuildRow } from './cso-image-matrix';
 
 const DIGEST = /^sha256:[a-f0-9]{64}$/;
 const WORKFLOW = /^https:\/\/github\.com\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\/actions\/runs\/[0-9]+$/;
-const OUTPUT_IMAGE = /^ghcr\.io\/garrytan\/zstack\/cso-staging\/(node|bun|python|rails|postgresql)-(amd64|arm64)@sha256:[a-f0-9]{64}$/;
+const OUTPUT_IMAGE = /^ghcr\.io\/zeidmahmoud\/zstack\/cso-staging\/(node|bun|python|rails|postgresql)-(amd64|arm64)@sha256:[a-f0-9]{64}$/;
 const MAX_EVIDENCE_FILES = 10;
 const MAX_EVIDENCE_BYTES = 1024 * 1024;
 

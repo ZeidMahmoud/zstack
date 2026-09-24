@@ -206,24 +206,24 @@ describe('config', () => {
 
     test('parses SSH remote URLs', () => {
       // Test the regex directly since we can't mock Bun.spawnSync easily
-      const url = 'git@github.com:ZeidMahmoud/zstack.git';
+      const url = 'git@github.com:zeidmahmoud/zstack.git';
       const match = url.match(/[:/]([^/]+)\/([^/]+?)(?:\.git)?$/);
       expect(match).not.toBeNull();
-      expect(`${match![1]}-${match![2]}`).toBe('garrytan-zstack');
+      expect(`${match![1]}-${match![2]}`).toBe('zeidmahmoud-zstack');
     });
 
     test('parses HTTPS remote URLs', () => {
-      const url = 'https://github.com/ZeidMahmoud/zstack.git';
+      const url = 'https://github.com/zeidmahmoud/zstack.git';
       const match = url.match(/[:/]([^/]+)\/([^/]+?)(?:\.git)?$/);
       expect(match).not.toBeNull();
-      expect(`${match![1]}-${match![2]}`).toBe('garrytan-zstack');
+      expect(`${match![1]}-${match![2]}`).toBe('zeidmahmoud-zstack');
     });
 
     test('parses HTTPS remote URLs without .git suffix', () => {
-      const url = 'https://github.com/ZeidMahmoud/zstack';
+      const url = 'https://github.com/zeidmahmoud/zstack';
       const match = url.match(/[:/]([^/]+)\/([^/]+?)(?:\.git)?$/);
       expect(match).not.toBeNull();
-      expect(`${match![1]}-${match![2]}`).toBe('garrytan-zstack');
+      expect(`${match![1]}-${match![2]}`).toBe('zeidmahmoud-zstack');
     });
   });
 

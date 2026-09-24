@@ -9,7 +9,7 @@ zstack skills are Markdown files that Claude Code discovers from a `skills/` dir
 That's what dev mode does. It symlinks your repo into the local `.claude/skills/` directory so Claude Code reads skills straight from your checkout.
 
 ```bash
-git clone https://github.com/ZeidMahmoud/zstack.git && cd zstack
+git clone https://github.com/zeidmahmoud/zstack.git && cd zstack
 bun install                    # install dependencies
 bin/dev-setup                  # activate dev mode
 ```
@@ -223,7 +223,7 @@ Measurements from this PR on 2026-09-21:
 | Local complete free suite | All 993 files, six workers | 4m 35s |
 | Complete Linux CI | All 993 files, 20 isolated runners | 1m 40s across test steps; 3m 7s including setup and aggregation |
 
-The [Linux CI run](https://github.com/ZeidMahmoud/zstack/actions/runs/35642667809)
+The [Linux CI run](https://github.com/zeidmahmoud/zstack/actions/runs/35642667809)
 on `25030d68` included one recorded successful retry. Its slowest test step was 77 seconds;
 staggered starts made the complete test span longer. Typical PR paid-gate timing
 still needs measurement on a small change; test-runner changes use the full fallback.

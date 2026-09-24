@@ -9,10 +9,10 @@ const template = fs.readFileSync(
 
 describe('zstack PR liveness policy', () => {
   test('remembers the authenticated repository-owner exemption', () => {
-    expect(template).toContain('Repository owner @garrytan is explicitly exempt');
+    expect(template).toContain('Repository owner @zeidmahmoud is explicitly exempt');
     expect(template).toContain('gh api user --jq .login');
     expect(template).toMatch(/Git author metadata\s+alone is not sufficient/);
-    expect(template).toContain('PR author is @garrytan (owner exemption)');
+    expect(template).toContain('PR author is @zeidmahmoud (owner exemption)');
   });
 
   test('retains live ZSTACK PR proof for every other contributor', () => {

@@ -270,13 +270,13 @@ the code but doesn't highlight page-derived strings.
 
 **Effort:** M → S with CC. **Priority:** P2. **Depends on:** none.
 
-### P2: slug store migration — merge pre-fix `projects/garrytan/` data (v1.68 follow-up)
+### P2: slug store migration — merge pre-fix `projects/zeidmahmoud/` data (v1.68 follow-up)
 
 **What:** The v1.68 slug-parity fix (zstack-slug now matches remote-slug's
 owner-repo form) means machines that hit the degraded-slug bug (stray strong
 marker above a repo, e.g. an empty ~/.git) have historical decisions /
 timeline / ceo-plans / learnings filed under the marker-basename store
-(observed: `~/.zstack/projects/garrytan/`) instead of per-repo stores. Define
+(observed: `~/.zstack/projects/zeidmahmoud/`) instead of per-repo stores. Define
 and ship the merge/alias: attribute each misfiled record to its repo where
 derivable (timeline entries carry branch; decisions carry scope), else leave
 in place with a pointer file.
@@ -1027,7 +1027,7 @@ item's thesis. Start the burn-down with those four.
 `test/helpers/touchfiles.ts` E2E_TIERS (tier labels already exist per test), orphan
 list generated via `comm -23` between `ls test/skill-e2e-*.test.ts` and the file lists
 in `.github/workflows/evals*.yml`. Receipts from the autoplan incident:
-`~/.zstack/projects/garrytan-zstack/e2e-runs/2026-07-10-0154/` (0-turn "Unknown command"
+`~/.zstack/projects/zeidmahmoud-zstack/e2e-runs/2026-07-10-0154/` (0-turn "Unknown command"
 transcripts).
 
 ### ✅ DONE (verified 2026-08-29): Eval harness live progress + incremental persistence
@@ -1665,7 +1665,7 @@ made opt-in. Lower priority than the gbrain-side perf issue above.
 
 **What:** Phase 2a of the browser-skills design (`docs/designs/BROWSER_SKILLS_V1.md`). Two new zstack skills: `/scrape <intent>` (read-only) is the single entry point for pulling page data — first call prototypes via `$B` primitives, subsequent calls on a matching intent route to a codified browser-skill in ~200ms. `/skillify` codifies the most recent successful prototype into a permanent browser-skill on disk: synthesizes `script.ts` + `script.test.ts` + fixture from the agent's own context (final-attempt $B calls only), runs the test in a temp dir, asks before committing, atomic rename to `~/.zstack/browser-skills/<name>/`. The mutating-flow sibling `/automate` is split out as its own P0 (below) — same skillify pattern, different trust profile.
 
-**Why:** Phase 1 shipped the runtime — humans can hand-write deterministic browser scripts that zstack runs. Phase 2a unlocks the productivity gain: an agent that gets a flow right once via 20+ `$B` commands says `/skillify` and the script becomes a 200ms call forever after. Same skillify pattern Garry's articles describe, applied to the read-only browser activity (scraping) most amenable to deterministic compression. Mutating actions ship next as `/automate` because the failure mode (unintended writes) needs stronger gates.
+**Why:** Phase 1 shipped the runtime — humans can hand-write deterministic browser scripts that zstack runs. Phase 2a unlocks the productivity gain: an agent that gets a flow right once via 20+ `$B` commands says `/skillify` and the script becomes a 200ms call forever after. Same skillify pattern Zeid's articles describe, applied to the read-only browser activity (scraping) most amenable to deterministic compression. Mutating actions ship next as `/automate` because the failure mode (unintended writes) needs stronger gates.
 
 **Pros:** The 100x productivity gain lives here. Closes the loop: agents prototype, codify, then reach for the codified skill in future sessions instead of re-exploring. Replaces the original "self-authoring `$B` commands" P1 — same user-visible goal, no in-daemon isolation problem (skill scripts run as standalone Bun processes, never imported into the daemon). Synthesis question (Codex finding #6) is resolved by re-prompting from the agent's own conversation context (option b in the design doc), bounded to final-attempt `$B` calls per `/plan-eng-review` D2.
 
@@ -1785,7 +1785,7 @@ made opt-in. Lower priority than the gbrain-side perf issue above.
 
 ### P3: GBrain skillpack publishing for domain skills
 
-**What:** Domain skills are agent-authored notes per hostname. Right now they're per-machine or per-agent-repo. The natural compounding extension: publish curated skill packs to GBrain (`zstack-brain-sync`) so others can subscribe. "Louise's LinkedIn skills" or "Garry's GitHub skills" become packs anyone can pull.
+**What:** Domain skills are agent-authored notes per hostname. Right now they're per-machine or per-agent-repo. The natural compounding extension: publish curated skill packs to GBrain (`zstack-brain-sync`) so others can subscribe. "Louise's LinkedIn skills" or "Zeid's GitHub skills" become packs anyone can pull.
 
 **Why:** v1.8.0.0 gets us per-machine compounding. Cross-user compounding is the network effect — every user contributes, every user benefits.
 
@@ -2082,7 +2082,7 @@ via `zstack-config set blind_spot_coach false`.
 **Why:** Makes zstack a coach (challenges you) instead of a mirror (reflects
 you). The killer differentiation vs. a settings menu.
 
-**Pros:** The feature that makes zstack feel like Garry. Surfaces assumptions
+**Pros:** The feature that makes zstack feel like Zeid. Surfaces assumptions
 the user hasn't challenged.
 
 **Cons:** Logically conflicts with E1 (which adapts TO profile) and E6 (which
@@ -2203,7 +2203,7 @@ calibration gate is trustworthy.
 **Status:** IN PROGRESS on branch `garrytan/prompt-injection-guard`. Classifier swap:
 **TestSavantAI** replaces DeBERTa (better on developer content — HN/Reddit/Wikipedia/tech blogs all
 score SAFE 0.98+, attacks score INJECTION 0.99+). Pre-impl gate 3 (benign corpus dry-run)
-forced this pivot — see `~/.zstack/projects/garrytan-zstack/ceo-plans/2026-04-19-prompt-injection-guard.md`.
+forced this pivot — see `~/.zstack/projects/zeidmahmoud-zstack/ceo-plans/2026-04-19-prompt-injection-guard.md`.
 
 **What shipped in v1:**
 - `browse/src/security.ts` — canary injection + check, verdict combiner (ensemble rule),
@@ -2671,7 +2671,7 @@ Linux cookie import shipped in v0.11.11.0 (Wave 3). Supports Chrome, Chromium, B
 
 **Why:** Surfaced by the Claude adversarial subagent during the v1.0.1.0 ship. Today the tests would stay green while the template regresses, because the error-message strings already differ between test and template. It's a silent-drift bug waiting to happen.
 
-**Context:** The fixed test file is at `test/ship-version-sync.test.ts` (branched off garrytan/ship-version-sync). Existing precedent for extracting-from-skill-md is at `test/helpers/skill-parser.ts`. Pattern: read the template, slice from `## Step 12` to the next `---`, grep fenced bash, feed to `/bin/bash` with substituted fixtures.
+**Context:** The fixed test file is at `test/ship-version-sync.test.ts` (branched off zeidmahmoud/ship-version-sync). Existing precedent for extracting-from-skill-md is at `test/helpers/skill-parser.ts`. Pattern: read the template, slice from `## Step 12` to the next `---`, grep fenced bash, feed to `/bin/bash` with substituted fixtures.
 
 **Effort:** S (human: ~2h / CC: ~30min)
 **Priority:** P2
@@ -2705,7 +2705,7 @@ Linux cookie import shipped in v0.11.11.0 (Wave 3). Supports Chrome, Chromium, B
 
 **What:** Add a periodic E2E eval that creates a branch with 5+ commits spanning 3+ themes (features, cleanup, infra), runs /ship's Step 5 CHANGELOG generation, and verifies the CHANGELOG mentions all themes.
 
-**Why:** The bug fixed in v0.11.22 (garrytan/ship-full-commit-coverage) showed that /ship's CHANGELOG generation biased toward recent commits on long branches. The prompt fix adds a cross-check, but no test exercises the multi-commit failure mode. The existing `ship-local-workflow` E2E only uses a single-commit branch.
+**Why:** The bug fixed in v0.11.22 (zeidmahmoud/ship-full-commit-coverage) showed that /ship's CHANGELOG generation biased toward recent commits on long branches. The prompt fix adds a cross-check, but no test exercises the multi-commit failure mode. The existing `ship-local-workflow` E2E only uses a single-commit branch.
 
 **Context:** Would be a `periodic` tier test (~$4/run, non-deterministic since it tests LLM instruction-following). Setup: create bare remote, clone, add 5+ commits across different themes on a feature branch, run Step 5 via `claude -p`, verify CHANGELOG output covers all themes. Pattern: `ship-local-workflow` in `test/skill-e2e-workflow.test.ts`.
 
@@ -2963,7 +2963,7 @@ Shipped: Default model changed to Sonnet for structure tests (~30), Opus retaine
 
 **Effort:** S
 **Priority:** P2
-**Depends on:** `garrytan/team-supabase-store` branch landing on main
+**Depends on:** `zeidmahmoud/team-supabase-store` branch landing on main
 
 ### /yc-prep skill
 
@@ -3209,7 +3209,7 @@ Shipped in v0.6.5. TemplateContext in gen-skill-docs.ts bakes skill name into pr
 
 **Why:** zstack skills produce valuable artifacts stored at `~/.zstack/projects/$SLUG/`. When Claude's auto-compaction fires, it preserves a generic summary but doesn't know these artifacts exist. The plans and reviews that shaped the current work silently vanish from context, even though they're still on disk. This is the thing nobody else in the Claude Code ecosystem is solving, because nobody else has zstack's artifact architecture.
 
-**Context:** Inspired by Anthropic's `claude-progress.txt` pattern for long-running agents. Also informed by claude-mem's "progressive disclosure" approach. See `docs/designs/SESSION_INTELLIGENCE.md` for the broader vision. CEO plan: `~/.zstack/projects/garrytan-zstack/ceo-plans/2026-03-31-session-intelligence-layer.md`.
+**Context:** Inspired by Anthropic's `claude-progress.txt` pattern for long-running agents. Also informed by claude-mem's "progressive disclosure" approach. See `docs/designs/SESSION_INTELLIGENCE.md` for the broader vision. CEO plan: `~/.zstack/projects/zeidmahmoud-zstack/ceo-plans/2026-03-31-session-intelligence-layer.md`.
 
 **Effort:** S (human: ~30 min / CC: ~5 min)
 **Priority:** P1

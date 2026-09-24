@@ -63,7 +63,7 @@ const ID = /^[a-z0-9][a-z0-9._-]{0,100}$/;
 const BUILD_REVISION = /^[a-z0-9][a-z0-9._-]{0,100}$/;
 const STACKS = ['node', 'bun', 'python', 'rails', 'postgresql'] as const;
 const PLATFORMS = ['linux/amd64', 'linux/arm64'] as const;
-const QUALIFICATION_WORKFLOW = /^https:\/\/github\.com\/garrytan\/zstack\/actions\/runs\/[0-9]+$/;
+const QUALIFICATION_WORKFLOW = /^https:\/\/github\.com\/zeidmahmoud\/zstack\/actions\/runs\/[0-9]+$/;
 const REQUIRED: Record<string, string[]> = {
   node: ['node', 'npm', 'cso-preparation'],
   bun: ['bun', 'cso-preparation'],
@@ -126,7 +126,7 @@ export function validateRuntimeCatalog(value: unknown): asserts value is Runtime
     if (ids.has(runtime.id) || runtimeIdentities.has(identity)) throw new Error('INVALID_RUNTIME_ID');
     ids.add(runtime.id); runtimeIdentities.add(identity);
     const arch = runtime.platform === 'linux/amd64' ? 'amd64' : 'arm64';
-    const expectedImage = new RegExp(`^ghcr\\.io/ZeidMahmoud/zstack/cso-staging/${runtime.stack}-${arch}@sha256:[a-f0-9]{64}$`);
+    const expectedImage = new RegExp(`^ghcr\\.io/zeidmahmoud/zstack/cso-staging/${runtime.stack}-${arch}@sha256:[a-f0-9]{64}$`);
     if (runtime.state !== 'qualified' || !IMAGE.test(runtime.image) || !expectedImage.test(runtime.image) || runtime.entrypoint !== '/opt/cso/entrypoint' ||
       runtime.helperAbi !== CSO_HELPER_ABI || runtime.policyVersion !== 'cso-isolation-v1') throw new Error('UNQUALIFIED_RUNTIME');
     const reviewed = profiles.get(runtime.id);

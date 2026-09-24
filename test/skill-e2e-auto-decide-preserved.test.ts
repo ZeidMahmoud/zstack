@@ -98,7 +98,7 @@ describeE2E('AUTO_DECIDE opt-in preserved under Conductor flags (periodic)', () 
         encoding: 'utf-8',
         timeout: 30_000,
       });
-      // zstack-slug emits `eval`-able shell exports like `SLUG=garrytan-zstack`.
+      // zstack-slug emits `eval`-able shell exports like `SLUG=zeidmahmoud-zstack`.
       const slug = slugRes.stdout.match(/SLUG=([^\s;]+)/)?.[1]?.replace(/['"]/g, '');
       if (slugRes.status !== 0 || !slug) throw new Error('zstack-slug failed to identify the owned project');
 

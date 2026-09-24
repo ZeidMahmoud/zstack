@@ -159,7 +159,7 @@ function assertedAnnotation(text: string, skillName: string): RegExpExecArray | 
   let index = 0;
   // A preamble notice is independent of the immediately following current
   // mode declaration. No arbitrary source/example prefix is skipped.
-  const preambleNotice = "Heads-up from the preamble: unshipped work on this branch, so `/review` then `/ship` when you're ready. Also, zstack follows the **Boil the Ocean** principle: do the complete thing when AI makes the marginal cost near zero. Read more at https://garryslist.org/posts/boil-the-ocean if you'd like.";
+  const preambleNotice = "Heads-up from the preamble: unshipped work on this branch, so `/review` then `/ship` when you're ready. Also, zstack follows the **Boil the Ocean** principle: do the complete thing when AI makes the marginal cost near zero. Read more at https://zeidslist.org/posts/boil-the-ocean if you'd like.";
   const decisionNotice = "Heads-up from zstack: there is unshipped work on this branch, so `/review` then `/ship` when you get to it.";
   if (/^Heads-up from zstack: this branch has unshipped work\. Run `\/review` then `\/ship` when you're ready\.$/.test(paragraphs[0] ?? '') || paragraphs[0] === preambleNotice || paragraphs[0] === decisionNotice) index++;
   const mode = /^\*\*Review mode:\s*([^*\n.]+)\.\*\*$/.exec(paragraphs[index] ?? '');

@@ -1222,7 +1222,7 @@
   "final": "ABSORBED",
   "basis": "absorbed per sweep evidence (not re-verified)",
   "evidence": [
-   "ABSORBED: upstream .github/workflows/evals.yml:78,82 (push/cache-to gated), :107 (job if), :309 (report job) carry the same guard; CLAUDE.md 'Checking out PRs from garrytan-agents' documents the fork-secret model."
+   "ABSORBED: upstream .github/workflows/evals.yml:78,82 (push/cache-to gated), :107 (job if), :309 (report job) carry the same guard; CLAUDE.md 'Checking out PRs from zeidmahmoud-agents' documents the fork-secret model."
   ],
   "notes": ""
  },
@@ -1798,12 +1798,12 @@
  },
  {
   "id": "gap1-s10-browsewave-disconnect-cause-null-browser",
-  "title": "resolveDisconnectCause tolerates a null browser on persistent-context disconnect (#1659, Garry's own PR)",
+  "title": "resolveDisconnectCause tolerates a null browser on persistent-context disconnect (#1659, Zeid's own PR)",
   "kind": "fix",
   "fork_refs": [
    "d947d2e1",
    "da065156",
-   "upstream PR #1659 @garrytan (OPEN)"
+   "upstream PR #1659 @zeidmahmoud (OPEN)"
   ],
   "final": "ABSORBED",
   "basis": "absorbed per sweep evidence (not re-verified)",
@@ -2078,7 +2078,7 @@
   "fork_refs": [
    "268e9ed1",
    "origin/backup/pre-isolated-wave-review-2026-07-14:docs/pr-triage/2026-07-13-community-pr-consolidation.md:111",
-   "ZeidMahmoud/zstack PR #1110 (OPEN, by @JiayuuWang)"
+   "zeidmahmoud/zstack PR #1110 (OPEN, by @JiayuuWang)"
   ],
   "final": "NOT_APPLICABLE",
   "basis": "pre-classified from sweep (fork-runtime-only)",

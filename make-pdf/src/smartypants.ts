@@ -89,7 +89,7 @@ function transformText(text: string): string {
   s = s.replace(/\s--$/gm, " \u2014");
 
   // Apostrophes in contractions and possessives.
-  // "don't", "it's", "they're", "Garry's"
+  // "don't", "it's", "they're", "Zeid's"
   s = s.replace(/(\w)'(\w)/g, "$1\u2019$2");
 
   // Double quotes: open if preceded by whitespace/bol, close if preceded

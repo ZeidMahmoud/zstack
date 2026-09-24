@@ -23,7 +23,7 @@ const platform = process.arch === 'arm64' ? 'linux/arm64' : 'linux/amd64';
 let root = '', watchdog = '', endpoint: DockerEndpoint, runtime: QualifiedRuntime, catalog: RuntimeCatalog;
 
 function qualification(kind: 'application' | 'postgresql') {
-  const common = { sourceCommit: 'b'.repeat(40), workflow: 'https://github.com/ZeidMahmoud/zstack/actions/runs/1',
+  const common = { sourceCommit: 'b'.repeat(40), workflow: 'https://github.com/zeidmahmoud/zstack/actions/runs/1',
     sbomDigest: `sha256:${'b'.repeat(64)}`, provenanceDigest: `sha256:${'c'.repeat(64)}`, verifiedProvenance: true as const };
   return kind === 'application'
     ? { ...common, kind, containmentPassed: true as const, coldStartPassed: true as const, positiveNegativeAssertionsPassed: true as const, heldOutRepairPassed: true as const }

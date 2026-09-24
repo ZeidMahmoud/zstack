@@ -166,7 +166,7 @@ Input:
   "argv": ["bun", "test", "test/billing.test.ts"],
   "combinedText": "...",
   "exitCode": 1,
-  "cwd": "/Users/garry/proj",
+  "cwd": "/Users/zeid/proj",
   "host": "claude-code"
 }
 ```

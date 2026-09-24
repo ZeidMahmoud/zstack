@@ -31,11 +31,11 @@ import {
 
 describe("canonicalizeRemote", () => {
   it("strips https scheme and .git suffix", () => {
-    expect(canonicalizeRemote("https://github.com/ZeidMahmoud/zstack.git")).toBe("github.com/ZeidMahmoud/zstack");
+    expect(canonicalizeRemote("https://github.com/zeidmahmoud/zstack.git")).toBe("github.com/zeidmahmoud/zstack");
   });
 
   it("normalizes git@host:path scp-style remotes", () => {
-    expect(canonicalizeRemote("git@github.com:ZeidMahmoud/zstack.git")).toBe("github.com/ZeidMahmoud/zstack");
+    expect(canonicalizeRemote("git@github.com:zeidmahmoud/zstack.git")).toBe("github.com/zeidmahmoud/zstack");
   });
 
   it("strips ssh:// scheme", () => {
@@ -74,14 +74,14 @@ describe("canonicalizeRemote", () => {
     // A remote configured with both a .git suffix and a trailing slash must
     // canonicalize to the same key as one without — otherwise the same repo
     // gets two dedup/source-id keys across machines.
-    expect(canonicalizeRemote("https://github.com/ZeidMahmoud/zstack.git/")).toBe("github.com/ZeidMahmoud/zstack");
-    expect(canonicalizeRemote("git@github.com:ZeidMahmoud/zstack.git/")).toBe("github.com/ZeidMahmoud/zstack");
+    expect(canonicalizeRemote("https://github.com/zeidmahmoud/zstack.git/")).toBe("github.com/zeidmahmoud/zstack");
+    expect(canonicalizeRemote("git@github.com:zeidmahmoud/zstack.git/")).toBe("github.com/zeidmahmoud/zstack");
     expect(canonicalizeRemote("https://github.com/foo/bar.git///")).toBe("github.com/foo/bar");
   });
 
   it("produces the same key with or without a trailing slash", () => {
-    expect(canonicalizeRemote("https://github.com/ZeidMahmoud/zstack.git/")).toBe(
-      canonicalizeRemote("https://github.com/ZeidMahmoud/zstack.git")
+    expect(canonicalizeRemote("https://github.com/zeidmahmoud/zstack.git/")).toBe(
+      canonicalizeRemote("https://github.com/zeidmahmoud/zstack.git")
     );
   });
 

@@ -366,7 +366,7 @@ Watermark advances past the offending commit. The same file fails again if it ch
 
 ### ZeroEntropy embeddings stop working after September 4, 2026
 
-ZeroEntropy was acquired by Notion and sunsets its hosted API on **September 4, 2026** (new signups already disabled). A gbrain configured with the `zeroentropyai` embedding recipe keeps importing pages after that date, but embedding silently fails — pages land structurally with no semantic search. The wireup helper warns when your `~/.gbrain/config.json` names the recipe; migrate to another provider (Voyage via `VOYAGE_API_KEY`, or OpenAI via `OPENAI_API_KEY`) before the deadline. Details, self-hosting caveats, and migration discussion: [ZeidMahmoud/zstack#2365](https://github.com/ZeidMahmoud/zstack/issues/2365).
+ZeroEntropy was acquired by Notion and sunsets its hosted API on **September 4, 2026** (new signups already disabled). A gbrain configured with the `zeroentropyai` embedding recipe keeps importing pages after that date, but embedding silently fails — pages land structurally with no semantic search. The wireup helper warns when your `~/.gbrain/config.json` names the recipe; migrate to another provider (Voyage via `VOYAGE_API_KEY`, or OpenAI via `OPENAI_API_KEY`) before the deadline. Details, self-hosting caveats, and migration discussion: [zeidmahmoud/zstack#2365](https://github.com/zeidmahmoud/zstack/issues/2365).
 
 ### Switching PGLite → Supabase hangs
 

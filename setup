@@ -37,7 +37,7 @@ Examples:
   ./setup --team                   # team mode for a shared repo
   ./setup --no-prefix              # use short slash-command names
 
-Docs: https://github.com/ZeidMahmoud/zstack
+Docs: https://github.com/zeidmahmoud/zstack
 EOF
 }
 
@@ -582,7 +582,7 @@ fi
 # --local: install to .claude/skills/ in the current working directory (deprecated)
 if [ "$LOCAL_INSTALL" -eq 1 ]; then
   echo "Warning: --local is deprecated. Use global install + --team instead." >&2
-  echo "  See: https://github.com/ZeidMahmoud/zstack#team-mode" >&2
+  echo "  See: https://github.com/zeidmahmoud/zstack#team-mode" >&2
   if [ "$HOST" = "codex" ]; then
     echo "Error: --local is only supported for Claude Code (not Codex)." >&2
     exit 1
@@ -1058,7 +1058,7 @@ if [ "$NEEDS_BUILD" -eq 1 ]; then
   # adhoc code-page signature satisfies the kernel's exec check even when
   # `codesign --verify` is unhappy, so a re-sign failure only warns when the
   # binary is genuinely SIGKILL'd on exec (exit 137).
-  # See: https://github.com/ZeidMahmoud/zstack/issues/997
+  # See: https://github.com/zeidmahmoud/zstack/issues/997
   if [ "$(uname -s)" = "Darwin" ] && [ "$(uname -m)" = "arm64" ]; then
     # CSO artifacts are signed and verified inside build-cso's staged generation;
     # mutating them here would break its launcher-last publication guarantee.

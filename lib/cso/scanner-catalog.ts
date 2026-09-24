@@ -52,7 +52,7 @@ const HASH = /^[a-f0-9]{64}$/;
 const DIGEST = /^sha256:[a-f0-9]{64}$/;
 const IMAGE = /^(?:[a-z0-9.-]+(?::[0-9]+)?\/)?[a-z0-9][a-z0-9._/-]*@sha256:[a-f0-9]{64}$/;
 const ID = /^[a-z0-9][a-z0-9._-]{0,100}$/;
-const QUALIFICATION_WORKFLOW = /^https:\/\/github\.com\/garrytan\/zstack\/actions\/runs\/[0-9]+$/;
+const QUALIFICATION_WORKFLOW = /^https:\/\/github\.com\/zeidmahmoud\/zstack\/actions\/runs\/[0-9]+$/;
 const PLATFORMS: RuntimePlatform[] = ['linux/amd64', 'linux/arm64'];
 const path = (s: unknown, prefix: string): s is string => typeof s === 'string' && s.startsWith(prefix) && !/[\x00-\x20\\,]/.test(s) && !s.split('/').some(x => x === '..' || x === '.') && !s.includes('//');
 function invalid(message: string): never { throw new CsoError('INCOMPATIBLE_INPUT', message); }
@@ -81,7 +81,7 @@ export function assertScannerVersionOutput(scanner:ScannerId,version:string,stdo
 export function validateQualifiedScanner(s: QualifiedScanner): void {
     if (!SCANNER_IDS.includes(s.scanner) || !['linux/amd64', 'linux/arm64'].includes(s.platform)) invalid('Unsupported scanner or platform');
     const arch = s.platform === 'linux/amd64' ? 'amd64' : 'arm64';
-    const expectedImage = new RegExp(`^ghcr\\.io/ZeidMahmoud/zstack/cso-scanners/${s.scanner}-${arch}@sha256:[a-f0-9]{64}$`);
+    const expectedImage = new RegExp(`^ghcr\\.io/zeidmahmoud/zstack/cso-scanners/${s.scanner}-${arch}@sha256:[a-f0-9]{64}$`);
     if (s.state !== 'qualified' || !IMAGE.test(s.image) || !expectedImage.test(s.image) || s.entrypoint !== '/opt/cso/entrypoint' || s.helperAbi !== ABI || s.isolationPolicyHash !== ISOLATION_POLICY_HASH) invalid('Scanner profile is not qualified for this helper isolation policy');
     if (s.executable !== '/opt/cso/bin/scanner' || !/^[0-9][A-Za-z0-9.+_-]{0,100}$/.test(s.version) || !HASH.test(s.versionOutputSha256)) invalid('Scanner executable and version must be pinned');
     if (!Array.isArray(s.capabilities) || !s.capabilities.length || s.capabilities.length > 100 || s.capabilities.some(x => typeof x !== 'string' || !x || x.length > 100)) invalid('Scanner capabilities must be reviewed');

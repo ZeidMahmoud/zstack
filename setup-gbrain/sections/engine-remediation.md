@@ -2,7 +2,7 @@
 <!-- Regenerate: bun run gen:skill-docs -->
 ### Step 1.5 remediation: broken-engine AskUserQuestion + repair branches
 
-The user has a non-working local engine (Garry's repro: `~/.gbrain/config.json`
+The user has a non-working local engine (Zeid's repro: `~/.gbrain/config.json`
 points at a dead Postgres URL). Fire a targeted AskUserQuestion BEFORE Step 2:
 
 > D# — Your local gbrain engine isn't responding. How do you want to fix it?

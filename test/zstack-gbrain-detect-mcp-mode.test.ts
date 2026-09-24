@@ -277,20 +277,20 @@ describe('zstack_artifacts_remote', () => {
   test('reads ~/.zstack-artifacts-remote.txt when present', () => {
     fs.writeFileSync(
       path.join(tmpHome, '.zstack-artifacts-remote.txt'),
-      'https://github.com/ZeidMahmoud/zstack-artifacts-garrytan\n'
+      'https://github.com/zeidmahmoud/zstack-artifacts-zeidmahmoud\n'
     );
     expect(runDetect().json.zstack_artifacts_remote).toBe(
-      'https://github.com/ZeidMahmoud/zstack-artifacts-garrytan'
+      'https://github.com/zeidmahmoud/zstack-artifacts-zeidmahmoud'
     );
   });
 
   test('migration-window fallback: reads ~/.zstack-brain-remote.txt if artifacts file is missing', () => {
     fs.writeFileSync(
       path.join(tmpHome, '.zstack-brain-remote.txt'),
-      'git@github.com:ZeidMahmoud/zstack-brain-garrytan.git\n'
+      'git@github.com:zeidmahmoud/zstack-brain-zeidmahmoud.git\n'
     );
     expect(runDetect().json.zstack_artifacts_remote).toBe(
-      'git@github.com:ZeidMahmoud/zstack-brain-garrytan.git'
+      'git@github.com:zeidmahmoud/zstack-brain-zeidmahmoud.git'
     );
   });
 

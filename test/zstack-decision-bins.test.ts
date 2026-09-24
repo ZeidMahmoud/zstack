@@ -201,7 +201,7 @@ describe("zstack-decision-search", () => {
     logFlag("--compact");
     expect(search()).not.toContain("secretish-call");
     expect(search("--all")).not.toContain("secretish-call");
-    const archive = path.join(tmpDir, "projects", "garrytan-zstack", "decisions.archive.jsonl");
+    const archive = path.join(tmpDir, "projects", "zeidmahmoud-zstack", "decisions.archive.jsonl");
     if (fs.existsSync(archive)) expect(fs.readFileSync(archive, "utf-8")).not.toContain("secretish-call");
   });
   test("--json emits an array", () => {

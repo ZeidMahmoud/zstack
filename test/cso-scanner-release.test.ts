@@ -13,7 +13,7 @@ import { verifiedStatementSetDigest } from '../scripts/cso-attestation-evidence'
 const ROOT = path.resolve(import.meta.dir, '..'), HASH = 'a'.repeat(64), DIGEST = `sha256:${HASH}`;
 const temps: string[] = [];
 afterEach(() => { for (const dir of temps.splice(0)) fs.rmSync(dir, { recursive: true, force: true }); });
-const image = (id: string) => `ghcr.io/ZeidMahmoud/zstack/cso-scanners/${id}@sha256:${HASH}`;
+const image = (id: string) => `ghcr.io/zeidmahmoud/zstack/cso-scanners/${id}@sha256:${HASH}`;
 const attested=(id:string,repository=`https://github.com/example/${id}`)=>({image:image(id),repository,sourceCommit:'b'.repeat(40),release:`v${id}-1.2.3`,signerWorkflow:`example/${id}/.github/workflows/release.yml`,signerDigest:'c'.repeat(40),provenanceStatementDigest:DIGEST,sbomStatementDigest:DIGEST});
 function reviewedInputs() {
   return { schemaVersion: 1, helperAbi: 3, state: 'reviewed', sbomGenerator: attested('sbom'), profiles: SCANNER_IDS.map(scanner => ({
@@ -31,7 +31,7 @@ function qualified(scanner: ScannerId, platform: 'linux/amd64' | 'linux/arm64') 
     capabilities: scannerPlans({ snapshotRoot: '/source', offline: true, selected: [scanner] })[0].requiredFeatures,
     ...(scanner === 'semgrep' ? { assets: { semgrepRules: { path: '/policy/catalog/semgrep.yml', sha256: HASH } } }
       : ['osv', 'trivy'].includes(scanner) ? { assets: { advisoryDatabase: { path: `/opt/cso/scanner-data/${scanner}`, contentSha256: HASH, updatedAt: '2026-09-10T00:00:00.000Z', ecosystems: ['npm'] } } } : {}),
-    qualifiedAt: '2026-09-10T00:00:00.000Z', qualification: { sourceCommit: 'c'.repeat(40), workflow: 'https://github.com/ZeidMahmoud/zstack/actions/runs/42', sbomDigest: DIGEST, provenanceDigest: DIGEST, verifiedProvenance: true as const, containmentPassed: true as const, adapterContractPassed: true as const, offlineAssetsPassed: true as const } };
+    qualifiedAt: '2026-09-10T00:00:00.000Z', qualification: { sourceCommit: 'c'.repeat(40), workflow: 'https://github.com/zeidmahmoud/zstack/actions/runs/42', sbomDigest: DIGEST, provenanceDigest: DIGEST, verifiedProvenance: true as const, containmentPassed: true as const, adapterContractPassed: true as const, offlineAssetsPassed: true as const } };
 }
 
 describe('CSO scanner release inputs', () => {
@@ -68,7 +68,7 @@ describe('CSO scanner release inputs', () => {
 });
 
 describe('CSO scanner catalog promotion', () => {
-  const expected = { sourceCommit: 'c'.repeat(40), workflow: 'https://github.com/ZeidMahmoud/zstack/actions/runs/42', imagePrefix: 'ghcr.io/ZeidMahmoud/zstack/cso-scanners/' };
+  const expected = { sourceCommit: 'c'.repeat(40), workflow: 'https://github.com/zeidmahmoud/zstack/actions/runs/42', imagePrefix: 'ghcr.io/zeidmahmoud/zstack/cso-scanners/' };
   const fragments = () => SCANNER_IDS.flatMap(scanner => ['linux/amd64', 'linux/arm64'].map(platform => qualified(scanner, platform as any)));
   test('assembles only a complete qualified matrix and records rollback identity', () => {
     const proposal = scannerCatalogProposal(SCANNER_CATALOG, fragments(), 'cso-scanners-qualified-42', expected);
@@ -81,7 +81,7 @@ describe('CSO scanner catalog promotion', () => {
     const missing = fragments(); missing.pop(); expect(() => scannerCatalogProposal(SCANNER_CATALOG, missing, 'missing-profile', expected)).toThrow('INCOMPLETE_SCANNER_CATALOG_MATRIX');
     const capabilities = fragments() as any[]; capabilities[0].capabilities = ['invented']; expect(() => scannerCatalogProposal(SCANNER_CATALOG, capabilities, 'bad-capability', expected)).toThrow('capabilities do not match');
     const source = fragments() as any[]; source[0].qualification.sourceCommit = 'd'.repeat(40); expect(() => scannerCatalogProposal(SCANNER_CATALOG, source, 'wrong-source', expected)).toThrow('SOURCE_COMMIT_MISMATCH');
-    const foreign = fragments() as any[]; foreign[0].image = image('foreign').replace('ZeidMahmoud/zstack', 'other/repo'); expect(() => scannerCatalogProposal(SCANNER_CATALOG, foreign, 'foreign-image', expected)).toThrow('Scanner profile is not qualified');
+    const foreign = fragments() as any[]; foreign[0].image = image('foreign').replace('zeidmahmoud/zstack', 'other/repo'); expect(() => scannerCatalogProposal(SCANNER_CATALOG, foreign, 'foreign-image', expected)).toThrow('Scanner profile is not qualified');
   });
   test('promotion is a compare-and-swap against the currently reviewed revision', () => {
     const proposal = scannerCatalogProposal(SCANNER_CATALOG, fragments(), 'cso-scanners-qualified-43', expected);

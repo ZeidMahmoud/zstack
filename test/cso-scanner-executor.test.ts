@@ -18,16 +18,16 @@ const HASH = 'a'.repeat(64), DIGEST = `sha256:${HASH}`;
 const version = (id: ScannerId) => `${id} version ${id === 'osv' ? '2.4.0' : '4.0.0'}\n`;
 function profile(id: ScannerId, platform: 'linux/amd64' | 'linux/arm64' = 'linux/amd64'): QualifiedScanner {
   const arch = platform.endsWith('arm64') ? 'arm64' : 'amd64';
-  return { id: `${id}-test-${arch}`, scanner: id, state: 'qualified', platform, image: `ghcr.io/ZeidMahmoud/zstack/cso-scanners/${id}-${arch}@${DIGEST}`,
+  return { id: `${id}-test-${arch}`, scanner: id, state: 'qualified', platform, image: `ghcr.io/zeidmahmoud/zstack/cso-scanners/${id}-${arch}@${DIGEST}`,
     entrypoint: '/opt/cso/entrypoint', executable: '/opt/cso/bin/scanner', version: id === 'osv' ? '2.4.0' : '4.0.0', versionOutputSha256: scannerVersionHash(version(id)), helperAbi: 3, isolationPolicyHash: ISOLATION_POLICY_HASH,
     capabilities: scannerPlans({ snapshotRoot: '/source', offline: true, selected: [id] })[0].requiredFeatures,
     ...(id === 'semgrep' ? { assets: { semgrepRules: { path: '/policy/catalog/semgrep.yml', sha256: HASH } } } : {}),
     ...(['osv', 'trivy'].includes(id) ? { assets: { advisoryDatabase: { path: '/opt/cso/scanner-data/db', contentSha256: HASH, updatedAt: '2026-09-09T00:00:00.000Z', ecosystems: ['npm'] } } } : {}),
-    qualifiedAt: '2026-09-09T00:00:00.000Z', qualification: { sourceCommit: 'b'.repeat(40), workflow: 'https://github.com/ZeidMahmoud/zstack/actions/runs/42', sbomDigest: DIGEST, provenanceDigest: DIGEST, verifiedProvenance: true, containmentPassed: true, adapterContractPassed: true, offlineAssetsPassed: true } };
+    qualifiedAt: '2026-09-09T00:00:00.000Z', qualification: { sourceCommit: 'b'.repeat(40), workflow: 'https://github.com/zeidmahmoud/zstack/actions/runs/42', sbomDigest: DIGEST, provenanceDigest: DIGEST, verifiedProvenance: true, containmentPassed: true, adapterContractPassed: true, offlineAssetsPassed: true } };
 }
 function catalog(..._ids: ScannerId[]): ScannerCatalog {
   const scanners = SCANNER_IDS.flatMap(id => [profile(id), profile(id, 'linux/arm64')]);
-  return { schemaVersion: 1, helperAbi: 3, revision: 'unit-fixture-only', promotion: { sourceCommit: 'b'.repeat(40), workflow: 'https://github.com/ZeidMahmoud/zstack/actions/runs/42', evidenceDigest: `sha256:${sha256(canonical(scanners))}` }, scanners };
+  return { schemaVersion: 1, helperAbi: 3, revision: 'unit-fixture-only', promotion: { sourceCommit: 'b'.repeat(40), workflow: 'https://github.com/zeidmahmoud/zstack/actions/runs/42', evidenceDigest: `sha256:${sha256(canonical(scanners))}` }, scanners };
 }
 const scannerProfile = (c: ScannerCatalog, id: ScannerId, platform: 'linux/amd64' | 'linux/arm64' = 'linux/amd64') => c.scanners.find(item => item.scanner === id && item.platform === platform)!;
 const runtimes = completeRuntimeCatalogFixture('scanner-runtime-fixture');

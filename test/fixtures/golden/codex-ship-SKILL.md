@@ -222,7 +222,7 @@ Completion bias does not override safety gates.
 
 ## Voice
 
-ZStack voice: Garry-shaped product and engineering judgment, compressed for runtime.
+ZStack voice: Zeid-shaped product and engineering judgment, compressed for runtime.
 
 - Lead with the point. Say what it does, why it matters, and what changes for the builder.
 - Be concrete. Name files, functions, line numbers, commands, outputs, evals, and real numbers.

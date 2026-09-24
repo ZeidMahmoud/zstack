@@ -448,12 +448,12 @@ Utilities live in `lib/error-handling.ts`. Don't chase the score.
 When reviewing or merging community PRs, **always AskUserQuestion** before accepting
 any commit that:
 
-1. **Touches ETHOS.md** — this file is Garry's personal builder philosophy. No edits
+1. **Touches ETHOS.md** — this file is Zeid's personal builder philosophy. No edits
    from external contributors or AI agents, period.
 2. **Removes or softens promotional material** — YC references, founder perspective,
    and product voice are intentional. PRs that frame these as "unnecessary" or
    "too promotional" must be rejected.
-3. **Changes Garry's voice** — the tone, humor, directness, and perspective in skill
+3. **Changes Zeid's voice** — the tone, humor, directness, and perspective in skill
    templates, CHANGELOG, and docs are not generic. PRs that rewrite voice to be
    more "neutral" or "professional" must be rejected.
 
@@ -461,28 +461,28 @@ Even if the agent strongly believes a change improves the project, these three
 categories require explicit user approval via AskUserQuestion. No exceptions.
 No auto-merging. No "I'll just clean this up."
 
-## Checking out PRs from garrytan-agents
+## Checking out PRs from zeidmahmoud-agents
 
-When the user says "check out <PR link>" and the PR is from `garrytan-agents/zstack`
-(or any other fork that is NOT a collaborator on `ZeidMahmoud/zstack`), do NOT just
+When the user says "check out <PR link>" and the PR is from `zeidmahmoud-agents/zstack`
+(or any other fork that is NOT a collaborator on `zeidmahmoud/zstack`), do NOT just
 `gh pr checkout`. Fork PRs don't receive base-repo secrets (`ANTHROPIC_API_KEY`,
 `OPENAI_API_KEY`, etc.), so the eval/E2E CI jobs fail with empty-env auth errors
 regardless of what's set on the base repo.
 
-**Workflow:** push the branch to `ZeidMahmoud/zstack` (the base repo) and re-target
+**Workflow:** push the branch to `zeidmahmoud/zstack` (the base repo) and re-target
 the PR from there.
 
 Concretely, after `gh pr checkout <N>`:
 
 1. Note the original PR number and head branch name.
 2. Push the same branch to the base repo: `git push origin HEAD:<branch-name>`
-   (origin = `ZeidMahmoud/zstack`, since the worktree is set up with that remote).
+   (origin = `zeidmahmoud/zstack`, since the worktree is set up with that remote).
 3. Close the fork PR (`gh pr close <N> --comment "moving to base-repo branch for secret access"`).
 4. Open a new PR from the base-repo branch: `gh pr create --base main --head <branch-name>`.
 5. New PR's workflows will get secrets automatically.
 
-Why not fix it on the fork side? `garrytan-agents` isn't a collaborator on
-`ZeidMahmoud/zstack`. Adding it as a collaborator (option A) or flipping the
+Why not fix it on the fork side? `zeidmahmoud-agents` isn't a collaborator on
+`zeidmahmoud/zstack`. Adding it as a collaborator (option A) or flipping the
 repo-wide "send secrets to fork PRs" toggle (option B) would let secrets reach
 fork PRs from anyone — broader blast radius than just moving this one branch.
 Option C (this section) keeps secret-distribution scope tight.

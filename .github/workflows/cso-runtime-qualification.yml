@@ -49,7 +49,7 @@ jobs:
           mkdir public-image-evidence
           jq -c '.client_payload.statements[]' "$GITHUB_EVENT_PATH" | while IFS= read -r statement; do
             runtime_id="$(printf '%s' "$statement" | jq -er '.runtimeId | select(test("^[a-z0-9][a-z0-9._-]{0,100}$"))')"
-            image="$(printf '%s' "$statement" | jq -er '.image | select(test("^ghcr.io/ZeidMahmoud/zstack/cso-staging/[a-z0-9-]+-(amd64|arm64)@sha256:[a-f0-9]{64}$"))')"
+            image="$(printf '%s' "$statement" | jq -er '.image | select(test("^ghcr.io/zeidmahmoud/zstack/cso-staging/[a-z0-9-]+-(amd64|arm64)@sha256:[a-f0-9]{64}$"))')"
             platform="$(printf '%s' "$statement" | jq -er '.platform | select(. == "linux/amd64" or . == "linux/arm64")')"
             bun run scripts/cso-public-ghcr.ts verify \
               --image "$image" --platform "$platform" --repository "$GITHUB_REPOSITORY" \
@@ -66,7 +66,7 @@ jobs:
           mkdir qualification-evidence
           jq -c '.client_payload.statements[]' "$GITHUB_EVENT_PATH" | while IFS= read -r statement; do
             runtime_id="$(printf '%s' "$statement" | jq -er '.runtimeId | select(test("^[a-z0-9][a-z0-9._-]{0,100}$"))')"
-            image="$(printf '%s' "$statement" | jq -er '.image | select(test("^ghcr.io/ZeidMahmoud/zstack/cso-staging/[a-z0-9-]+-(amd64|arm64)@sha256:[a-f0-9]{64}$"))')"
+            image="$(printf '%s' "$statement" | jq -er '.image | select(test("^ghcr.io/zeidmahmoud/zstack/cso-staging/[a-z0-9-]+-(amd64|arm64)@sha256:[a-f0-9]{64}$"))')"
             source_commit="$(printf '%s' "$statement" | jq -er '.sourceCommit | select(test("^[a-f0-9]{40}$"))')"
             output="qualification-evidence/$runtime_id"
             mkdir "$output"

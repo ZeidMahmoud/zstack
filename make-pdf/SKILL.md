@@ -234,7 +234,7 @@ $P generate letter.md letter.pdf      # explicit output path
 ### Publication mode — cover + TOC + chapter breaks
 
 ```bash
-$P generate --cover --toc --author "Garry Tan" --title "On Horizons" \
+$P generate --cover --toc --author "Zeid Mahmoud" --title "On Horizons" \
   essay.md essay.pdf
 ```
 

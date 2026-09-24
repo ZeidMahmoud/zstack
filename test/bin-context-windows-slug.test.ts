@@ -287,8 +287,8 @@ describe("walk-up parity with bin/zstack-slug (outermost project root)", () => {
     const repo = path.join(strayHome, "work", "repo");
     fs.mkdirSync(repo, { recursive: true });
     spawnSync("git", ["init", "-q", repo], { timeout: 30_000 });
-    spawnSync("git", ["-C", repo, "remote", "add", "origin", "https://github.com/ZeidMahmoud/zstack"], { timeout: 30_000 });
-    expectBoth(repo, "garrytan-zstack");
+    spawnSync("git", ["-C", repo, "remote", "add", "origin", "https://github.com/zeidmahmoud/zstack"], { timeout: 30_000 });
+    expectBoth(repo, "zeidmahmoud-zstack");
     expect(slugFromEnvironment(nativeHome(), repo)).not.toBe("strayhome");
   });
 
@@ -314,16 +314,16 @@ describe("walk-up parity with bin/zstack-slug (outermost project root)", () => {
     const repo = path.join(strayHome, "git", "proj");
     fs.mkdirSync(repo, { recursive: true });
     spawnSync("git", ["init", "-q", repo], { timeout: 30_000 });
-    spawnSync("git", ["-C", repo, "remote", "add", "origin", "https://github.com/ZeidMahmoud/zstack"], { timeout: 30_000 });
+    spawnSync("git", ["-C", repo, "remote", "add", "origin", "https://github.com/zeidmahmoud/zstack"], { timeout: 30_000 });
 
     const cacheDir = path.join(nativeHome(), "slug-cache");
     fs.mkdirSync(cacheDir, { recursive: true });
     const cacheFile = path.join(cacheDir, toMsysPath(repo).replace(/\//g, "_"));
     fs.writeFileSync(cacheFile, "strayhome"); // the degraded value the old resolver cached
 
-    expect(slugFromEnvironment(nativeHome(), repo)).toBe("garrytan-zstack");
+    expect(slugFromEnvironment(nativeHome(), repo)).toBe("zeidmahmoud-zstack");
     // The cache file itself must have been overwritten (self-healing).
-    expect(fs.readFileSync(cacheFile, "utf-8")).toBe("garrytan-zstack");
+    expect(fs.readFileSync(cacheFile, "utf-8")).toBe("zeidmahmoud-zstack");
   });
 
   test("package.json wrapper root (no .git): sticky basename slug is PRESERVED — heal is stray-repo-shape only", () => {

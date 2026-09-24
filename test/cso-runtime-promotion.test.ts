@@ -46,10 +46,10 @@ function statements(): RuntimeQualificationStatement[] {
     runtimeId: row.runtimeId,
     stack: row.stack,
     platform: row.platform,
-    image: `ghcr.io/ZeidMahmoud/zstack/cso-staging/${row.stack}-${row.arch}@${digest(row.runtimeId)}`,
+    image: `ghcr.io/zeidmahmoud/zstack/cso-staging/${row.stack}-${row.arch}@${digest(row.runtimeId)}`,
     versions: row.versions,
     sourceCommit: 'a'.repeat(40),
-    workflow: 'https://github.com/ZeidMahmoud/zstack/actions/runs/123456',
+    workflow: 'https://github.com/zeidmahmoud/zstack/actions/runs/123456',
     qualifiedAt: '2026-09-10T12:00:00.000Z',
     sbomDigest: digest(`sbom:${row.runtimeId}`),
     provenanceDigest: digest(`provenance:${row.runtimeId}`),
@@ -74,7 +74,7 @@ describe('CSO runtime catalog promotion', () => {
     expect(candidate.runtimes).toHaveLength(10);
     expect(candidate.promotion).toMatchObject({
       sourceCommit: 'a'.repeat(40),
-      workflow: 'https://github.com/ZeidMahmoud/zstack/actions/runs/123456',
+      workflow: 'https://github.com/zeidmahmoud/zstack/actions/runs/123456',
     });
     expect(candidate.promotion!.evidenceDigest).toMatch(/^sha256:[a-f0-9]{64}$/);
     expect(candidate.promotion!.qualificationEvidenceDigest).toMatch(/^sha256:[a-f0-9]{64}$/);
@@ -88,11 +88,11 @@ describe('CSO runtime catalog promotion', () => {
     expect(() => catalogPromotionCandidate(committedCatalog, buildInputs, missing)).toThrow('MISSING_RELEASE_GATES');
 
     const mutable = statements();
-    mutable[0].image = 'ghcr.io/ZeidMahmoud/zstack/cso-staging/node-amd64:latest';
+    mutable[0].image = 'ghcr.io/zeidmahmoud/zstack/cso-staging/node-amd64:latest';
     expect(() => catalogPromotionCandidate(committedCatalog, buildInputs, mutable)).toThrow('INVALID_QUALIFIED_IMAGE');
 
     const split = statements();
-    split[0].workflow = 'https://github.com/ZeidMahmoud/zstack/actions/runs/999999';
+    split[0].workflow = 'https://github.com/zeidmahmoud/zstack/actions/runs/999999';
     expect(() => catalogPromotionCandidate(committedCatalog, buildInputs, split)).toThrow('SPLIT_QUALIFICATION_RUN');
 
     const extra = statements() as Array<RuntimeQualificationStatement & { finding?: string }>;

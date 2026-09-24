@@ -6,7 +6,7 @@ writing any `## [X.Y.Z]` CHANGELOG entry.
 ### Release-summary format (every `## [X.Y.Z]` entry)
 
 Every version entry in `CHANGELOG.md` MUST start with a release-summary section in
-the ZStack/Garry voice, one viewport's worth of prose + tables that lands like a
+the ZStack/Zeid voice, one viewport's worth of prose + tables that lands like a
 verdict, not marketing. The itemized changelog (subsections, bullets, files) goes
 BELOW that summary, separated by a `### Itemized changes` header.
 

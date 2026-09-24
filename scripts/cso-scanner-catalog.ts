@@ -64,8 +64,8 @@ export function scannerCatalogProposal(current: ScannerCatalog, fragments: unkno
   validateScannerCatalog(current);
   if (!REVISION.test(revision) || revision === current.revision) throw new Error('INVALID_SCANNER_CATALOG_REVISION');
   if (!expected || !/^[a-f0-9]{40}$/.test(expected.sourceCommit)) throw new Error('INVALID_EXPECTED_SOURCE_COMMIT');
-  if (!WORKFLOW.test(expected.workflow) || !expected.workflow.startsWith('https://github.com/ZeidMahmoud/zstack/actions/runs/')) throw new Error('INVALID_EXPECTED_WORKFLOW');
-  if (expected.imagePrefix !== 'ghcr.io/ZeidMahmoud/zstack/cso-scanners/') throw new Error('INVALID_EXPECTED_IMAGE_PREFIX');
+  if (!WORKFLOW.test(expected.workflow) || !expected.workflow.startsWith('https://github.com/zeidmahmoud/zstack/actions/runs/')) throw new Error('INVALID_EXPECTED_WORKFLOW');
+  if (expected.imagePrefix !== 'ghcr.io/zeidmahmoud/zstack/cso-scanners/') throw new Error('INVALID_EXPECTED_IMAGE_PREFIX');
   const scanners = fragments.map(strictProfile), identities = new Set<string>();
   if (scanners.length !== SCANNER_IDS.length * PLATFORMS.length) throw new Error('INCOMPLETE_SCANNER_CATALOG_MATRIX');
   for (const profile of scanners) {

@@ -43,9 +43,9 @@ describe("zstack-global-discover", () => {
     });
 
     test("SSH and HTTPS for same repo normalize to same URL", () => {
-      const ssh = normalizeRemoteUrl("git@github.com:ZeidMahmoud/zstack.git");
-      const https = normalizeRemoteUrl("https://github.com/ZeidMahmoud/zstack.git");
-      const httpsNoDotGit = normalizeRemoteUrl("https://github.com/ZeidMahmoud/zstack");
+      const ssh = normalizeRemoteUrl("git@github.com:zeidmahmoud/zstack.git");
+      const https = normalizeRemoteUrl("https://github.com/zeidmahmoud/zstack.git");
+      const httpsNoDotGit = normalizeRemoteUrl("https://github.com/zeidmahmoud/zstack");
       expect(ssh).toBe(https);
       expect(https).toBe(httpsNoDotGit);
     });

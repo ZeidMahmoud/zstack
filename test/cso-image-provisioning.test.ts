@@ -23,10 +23,10 @@ import { completeRuntimeCatalogFixture } from './helpers/cso-runtime-catalog';
 const roots:string[]=[];
 afterEach(()=>{for(const root of roots.splice(0))fs.rmSync(root,{recursive:true,force:true});});
 const target:RuntimePlatform=process.arch==='arm64'?'linux/arm64':'linux/amd64';
-const hash='a'.repeat(64),digest=`sha256:${hash}`,sourceCommit='b'.repeat(40),workflow='https://github.com/ZeidMahmoud/zstack/actions/runs/42';
+const hash='a'.repeat(64),digest=`sha256:${hash}`,sourceCommit='b'.repeat(40),workflow='https://github.com/zeidmahmoud/zstack/actions/runs/42';
 function scannerProfile(scanner:ScannerId,platform:RuntimePlatform):QualifiedScanner{
   const arch=platform.endsWith('arm64')?'arm64':'amd64',version=scanner==='osv'?'2.4.0':'4.0.0';
-  return{id:`${scanner}-provision-${arch}`,scanner,state:'qualified',platform,image:`ghcr.io/ZeidMahmoud/zstack/cso-scanners/${scanner}-${arch}@${digest}`,
+  return{id:`${scanner}-provision-${arch}`,scanner,state:'qualified',platform,image:`ghcr.io/zeidmahmoud/zstack/cso-scanners/${scanner}-${arch}@${digest}`,
     entrypoint:'/opt/cso/entrypoint',executable:'/opt/cso/bin/scanner',version,versionOutputSha256:scannerVersionHash(`${scanner} version ${version}\n`),helperAbi:3,isolationPolicyHash:ISOLATION_POLICY_HASH,
     capabilities:scannerPlans({snapshotRoot:'/source',offline:true,selected:[scanner]})[0].requiredFeatures,
     ...(scanner==='semgrep'?{assets:{semgrepRules:{path:'/policy/catalog/semgrep.yml',sha256:hash}}}:{}),

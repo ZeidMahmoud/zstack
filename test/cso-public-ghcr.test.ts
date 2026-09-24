@@ -10,37 +10,37 @@ import {
 } from '../scripts/cso-public-ghcr';
 
 const HASH = 'a'.repeat(64);
-const IMAGE = `ghcr.io/ZeidMahmoud/zstack/cso-staging/node-amd64@sha256:${HASH}`;
+const IMAGE = `ghcr.io/zeidmahmoud/zstack/cso-staging/node-amd64@sha256:${HASH}`;
 
 describe('CSO public GHCR release proof', () => {
   test('binds an exact CSO package and digest to its declared platform', () => {
-    expect(parsePublicGhcrTarget(IMAGE, 'linux/amd64', 'GarryTan/ZStack')).toEqual({
+    expect(parsePublicGhcrTarget(IMAGE, 'linux/amd64', 'ZeidMahmoud/ZStack')).toEqual({
       image: IMAGE,
-      owner: 'garrytan',
+      owner: 'zeidmahmoud',
       repository: 'zstack',
       packageName: 'zstack/cso-staging/node-amd64',
       digest: `sha256:${HASH}`,
       platform: 'linux/amd64',
     });
     expect(parsePublicGhcrTarget(
-      `ghcr.io/ZeidMahmoud/zstack/cso-scanners/semgrep-arm64@sha256:${HASH}`,
+      `ghcr.io/zeidmahmoud/zstack/cso-scanners/semgrep-arm64@sha256:${HASH}`,
       'linux/arm64',
-      'ZeidMahmoud/zstack',
+      'zeidmahmoud/zstack',
     ).packageName).toBe('zstack/cso-scanners/semgrep-arm64');
   });
 
   test('rejects tags, foreign repositories, unknown packages, and platform substitution', () => {
     for (const [image, platform, repository] of [
-      ['ghcr.io/ZeidMahmoud/zstack/cso-staging/node-amd64:latest', 'linux/amd64', 'ZeidMahmoud/zstack'],
-      [IMAGE.replace('ZeidMahmoud/zstack', 'attacker/zstack'), 'linux/amd64', 'ZeidMahmoud/zstack'],
-      [IMAGE.replace('node-amd64', 'unknown-amd64'), 'linux/amd64', 'ZeidMahmoud/zstack'],
-      [IMAGE, 'linux/arm64', 'ZeidMahmoud/zstack'],
+      ['ghcr.io/zeidmahmoud/zstack/cso-staging/node-amd64:latest', 'linux/amd64', 'zeidmahmoud/zstack'],
+      [IMAGE.replace('zeidmahmoud/zstack', 'attacker/zstack'), 'linux/amd64', 'zeidmahmoud/zstack'],
+      [IMAGE.replace('node-amd64', 'unknown-amd64'), 'linux/amd64', 'zeidmahmoud/zstack'],
+      [IMAGE, 'linux/arm64', 'zeidmahmoud/zstack'],
     ]) expect(() => parsePublicGhcrTarget(image, platform, repository)).toThrow();
   });
 
   test('accepts only exact public container metadata for the expected owner', () => {
-    const target = parsePublicGhcrTarget(IMAGE, 'linux/amd64', 'ZeidMahmoud/zstack');
-    const valid = { name: target.packageName, package_type: 'container', visibility: 'public', owner: { login: 'GarryTan' } };
+    const target = parsePublicGhcrTarget(IMAGE, 'linux/amd64', 'zeidmahmoud/zstack');
+    const valid = { name: target.packageName, package_type: 'container', visibility: 'public', owner: { login: 'ZeidMahmoud' } };
     expect(() => assertPublicPackageMetadata(valid, target)).not.toThrow();
     for (const mutation of [
       { ...valid, visibility: 'private' },
@@ -55,8 +55,8 @@ describe('CSO public GHCR release proof', () => {
     const fetch = (async (url: string | URL | Request, init?: RequestInit) => {
       expect((init?.headers as Record<string, string>).Authorization).toBe('Bearer metadata-token');
       const value = String(url).includes('/packages/container/')
-        ? { name: 'zstack/cso-staging/node-amd64', package_type: 'container', visibility: 'public', owner: { login: 'garrytan' } }
-        : { login: 'garrytan', type: 'User' };
+        ? { name: 'zstack/cso-staging/node-amd64', package_type: 'container', visibility: 'public', owner: { login: 'zeidmahmoud' } }
+        : { login: 'zeidmahmoud', type: 'User' };
       return new Response(JSON.stringify(value), { status: 200 });
     }) as typeof globalThis.fetch;
     const runDocker: PublicGhcrDependencies['runDocker'] = async (args, env) => {
@@ -71,7 +71,7 @@ describe('CSO public GHCR release proof', () => {
       return { exitCode: 0, stdout: IMAGE, stderr: '' };
     };
     const proof = await verifyPublicGhcrImage(
-      { image: IMAGE, platform: 'linux/amd64', githubRepository: 'ZeidMahmoud/zstack', removeAfter: true },
+      { image: IMAGE, platform: 'linux/amd64', githubRepository: 'zeidmahmoud/zstack', removeAfter: true },
       { fetch, githubToken: 'metadata-token', dockerPath: '/usr/bin/docker', runDocker, now: () => '2026-09-11T00:00:00.000Z', sleep: async () => {} },
     );
     expect(proof).toMatchObject({ image: IMAGE, packageVisibility: 'public', anonymousPull: 'passed', dockerConfig: 'isolated-empty-auths' });
@@ -85,22 +85,22 @@ describe('CSO public GHCR release proof', () => {
     let dockerCalls = 0;
     const privateFetch = (async (url: string | URL | Request) => new Response(JSON.stringify(
       String(url).includes('/packages/container/')
-        ? { name: 'zstack/cso-staging/node-amd64', package_type: 'container', visibility: 'private', owner: { login: 'garrytan' } }
-        : { login: 'garrytan', type: 'User' },
+        ? { name: 'zstack/cso-staging/node-amd64', package_type: 'container', visibility: 'private', owner: { login: 'zeidmahmoud' } }
+        : { login: 'zeidmahmoud', type: 'User' },
     ), { status: 200 })) as typeof globalThis.fetch;
     await expect(verifyPublicGhcrImage(
-      { image: IMAGE, platform: 'linux/amd64', githubRepository: 'ZeidMahmoud/zstack' },
+      { image: IMAGE, platform: 'linux/amd64', githubRepository: 'zeidmahmoud/zstack' },
       { fetch: privateFetch, githubToken: 'metadata-token', dockerPath: '/usr/bin/docker', runDocker: async () => { dockerCalls++; return { exitCode: 0, stdout: '', stderr: '' }; }, sleep: async () => {} },
     )).rejects.toThrow('GHCR_PACKAGE_IS_NOT_PUBLIC');
     expect(dockerCalls).toBe(0);
 
     const publicFetch = (async (url: string | URL | Request) => new Response(JSON.stringify(
       String(url).includes('/packages/container/')
-        ? { name: 'zstack/cso-staging/node-amd64', package_type: 'container', visibility: 'public', owner: { login: 'garrytan' } }
-        : { login: 'garrytan', type: 'User' },
+        ? { name: 'zstack/cso-staging/node-amd64', package_type: 'container', visibility: 'public', owner: { login: 'zeidmahmoud' } }
+        : { login: 'zeidmahmoud', type: 'User' },
     ), { status: 200 })) as typeof globalThis.fetch;
     await expect(verifyPublicGhcrImage(
-      { image: IMAGE, platform: 'linux/amd64', githubRepository: 'ZeidMahmoud/zstack' },
+      { image: IMAGE, platform: 'linux/amd64', githubRepository: 'zeidmahmoud/zstack' },
       { fetch: publicFetch, githubToken: 'metadata-token', dockerPath: '/usr/bin/docker', runDocker: async args => args.includes('inspect')
         ? { exitCode: 0, stdout: JSON.stringify([IMAGE.replace(HASH, 'b'.repeat(64))]), stderr: '' }
         : { exitCode: 0, stdout: '', stderr: '' }, sleep: async () => {} },
@@ -110,7 +110,7 @@ describe('CSO public GHCR release proof', () => {
   test('requires scoped GitHub authentication for visibility metadata without passing it to Docker', async () => {
     let fetched = false, pulled = false;
     await expect(verifyPublicGhcrImage(
-      { image: IMAGE, platform: 'linux/amd64', githubRepository: 'ZeidMahmoud/zstack' },
+      { image: IMAGE, platform: 'linux/amd64', githubRepository: 'zeidmahmoud/zstack' },
       {
         githubToken: '',
         dockerPath: '/usr/bin/docker',
@@ -132,12 +132,12 @@ describe('CSO public GHCR release proof', () => {
     fs.writeFileSync(docker, '#!/bin/sh\npython3 -c "import sys; sys.stdout.write(chr(120) * 70000)"\n', { mode: 0o700 });
     const fetch = (async (url: string | URL | Request) => new Response(JSON.stringify(
       String(url).includes('/packages/container/')
-        ? { name: 'zstack/cso-staging/node-amd64', package_type: 'container', visibility: 'public', owner: { login: 'garrytan' } }
-        : { login: 'garrytan', type: 'User' },
+        ? { name: 'zstack/cso-staging/node-amd64', package_type: 'container', visibility: 'public', owner: { login: 'zeidmahmoud' } }
+        : { login: 'zeidmahmoud', type: 'User' },
     ), { status: 200 })) as typeof globalThis.fetch;
     try {
       await expect(verifyPublicGhcrImage(
-        { image: IMAGE, platform: 'linux/amd64', githubRepository: 'ZeidMahmoud/zstack' },
+        { image: IMAGE, platform: 'linux/amd64', githubRepository: 'zeidmahmoud/zstack' },
         { fetch, githubToken: 'metadata-token', dockerPath: docker, sleep: async () => {} },
       )).rejects.toThrow('ANONYMOUS_DOCKER_OUTPUT_LIMIT');
     } finally { fs.rmSync(directory, { recursive: true, force: true }); }

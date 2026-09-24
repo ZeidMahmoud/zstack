@@ -10,7 +10,7 @@ import {
 const STACKS = ['node', 'bun', 'python', 'rails', 'postgresql'] as const;
 const PLATFORMS = ['linux/amd64', 'linux/arm64'] as const;
 const SOURCE_COMMIT = 'b'.repeat(40);
-const WORKFLOW = 'https://github.com/ZeidMahmoud/zstack/actions/runs/1';
+const WORKFLOW = 'https://github.com/zeidmahmoud/zstack/actions/runs/1';
 const DIGEST = `sha256:${'a'.repeat(64)}`;
 
 const VERSIONS: Record<CsoStack | 'postgresql', Record<string, string>> = {
@@ -61,7 +61,7 @@ export function qualifiedRuntimeFixture(
     stack,
     platform,
     state: 'qualified',
-    image: `ghcr.io/ZeidMahmoud/zstack/cso-staging/${stack}-${arch}@${DIGEST}`,
+    image: `ghcr.io/zeidmahmoud/zstack/cso-staging/${stack}-${arch}@${DIGEST}`,
     entrypoint: '/opt/cso/entrypoint',
     helperAbi: CSO_HELPER_ABI,
     versions: { ...VERSIONS[stack] },

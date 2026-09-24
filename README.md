@@ -1,10 +1,8 @@
 # zstack
 
-> **zstack** is a fork of [gstack](https://github.com/garrytan/gstack), rebranded for
-> personal use and bundled with the surrounding Claude Code workflow (plugins + installed
-> skills). The original tool, its philosophy, and the founder narrative it shipped with are
-> the work of the gstack author; see [`LICENSE`](LICENSE) for attribution and **[ZSTACK.md](ZSTACK.md)**
-> for what changed.
+> **zstack** is Zeid Mahmoud's Claude Code skill stack, bundled with the surrounding
+> Claude Code workflow (plugins + installed skills). See [`LICENSE`](LICENSE) for
+> attribution and **[ZSTACK.md](ZSTACK.md)** for how it is built and kept current.
 
 zstack turns Claude Code into a virtual engineering team. Instead of a blank prompt, you
 get a set of specialists you invoke as slash commands: a CEO who rethinks the product, an
@@ -41,7 +39,7 @@ When qualified CSO runtime images are published, setup gives each automatic prel
 
 Open Claude Code and paste this. Claude does the rest.
 
-> Install zstack: run **`git clone --single-branch --depth 1 https://github.com/ZeidMahmoud/zstack.git ~/.claude/skills/zstack && cd ~/.claude/skills/zstack && ./setup`** then add a "zstack" section to CLAUDE.md that says to use the /browse skill from zstack for all web browsing, never use mcp\_\_claude-in-chrome\_\_\* tools, and lists the available skills: /office-hours, /plan-ceo-review, /plan-eng-review, /plan-design-review, /design-consultation, /design-shotgun, /design-html, /review, /deslop-shared-libs, /ship, /land-and-deploy, /canary, /benchmark, /browse, /connect-chrome, /qa, /qa-only, /design-review, /scrape, /setup-browser-cookies, /setup-deploy, /setup-gbrain, /retro, /investigate, /document-release, /document-generate, /codex, /cso, /autoplan, /plan-devex-review, /devex-review, /careful, /freeze, /guard, /unfreeze, /zstack-upgrade, /learn. Then ask the user if they also want to add zstack to the current project so teammates get it.
+> Install zstack: run **`git clone --single-branch --depth 1 https://github.com/zeidmahmoud/zstack.git ~/.claude/skills/zstack && cd ~/.claude/skills/zstack && ./setup`** then add a "zstack" section to CLAUDE.md that says to use the /browse skill from zstack for all web browsing, never use mcp\_\_claude-in-chrome\_\_\* tools, and lists the available skills: /office-hours, /plan-ceo-review, /plan-eng-review, /plan-design-review, /design-consultation, /design-shotgun, /design-html, /review, /deslop-shared-libs, /ship, /land-and-deploy, /canary, /benchmark, /browse, /connect-chrome, /qa, /qa-only, /design-review, /scrape, /setup-browser-cookies, /setup-deploy, /setup-gbrain, /retro, /investigate, /document-release, /document-generate, /codex, /cso, /autoplan, /plan-devex-review, /devex-review, /careful, /freeze, /guard, /unfreeze, /zstack-upgrade, /learn. Then ask the user if they also want to add zstack to the current project so teammates get it.
 
 ### Step 2: Team mode — auto-update for shared repos (recommended)
 
@@ -60,7 +58,7 @@ Swap `required` for `optional` if you'd rather nudge teammates than block them.
 OpenClaw spawns Claude Code sessions via ACP, so every zstack skill just works
 when Claude Code has zstack installed. Paste this to your OpenClaw agent:
 
-> Install zstack: run `git clone --single-branch --depth 1 https://github.com/ZeidMahmoud/zstack.git ~/.claude/skills/zstack && cd ~/.claude/skills/zstack && ./setup` to install zstack for Claude Code. Then add a "Coding Tasks" section to AGENTS.md that says: when spawning Claude Code sessions for coding work, tell the session to use zstack skills. Include these examples — security audit: "Load zstack. Run /cso", code review: "Load zstack. Run /review", QA test a URL: "Load zstack. Run /qa https://...", build a feature end-to-end: "Load zstack. Run /autoplan, implement the plan, then run /ship", plan before building: "Load zstack. Run /office-hours then /autoplan. Save the plan, don't implement."
+> Install zstack: run `git clone --single-branch --depth 1 https://github.com/zeidmahmoud/zstack.git ~/.claude/skills/zstack && cd ~/.claude/skills/zstack && ./setup` to install zstack for Claude Code. Then add a "Coding Tasks" section to AGENTS.md that says: when spawning Claude Code sessions for coding work, tell the session to use zstack skills. Include these examples — security audit: "Load zstack. Run /cso", code review: "Load zstack. Run /review", QA test a URL: "Load zstack. Run /qa https://...", build a feature end-to-end: "Load zstack. Run /autoplan, implement the plan, then run /ship", plan before building: "Load zstack. Run /office-hours then /autoplan. Save the plan, don't implement."
 
 **After setup, just talk to your OpenClaw agent naturally:**
 
@@ -98,7 +96,7 @@ zstack works on 10 AI coding agents, not just Claude. Setup auto-detects which
 agents you have installed:
 
 ```bash
-git clone --single-branch --depth 1 https://github.com/ZeidMahmoud/zstack.git ~/zstack
+git clone --single-branch --depth 1 https://github.com/zeidmahmoud/zstack.git ~/zstack
 cd ~/zstack && ./setup
 ```
 

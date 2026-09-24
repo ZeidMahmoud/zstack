@@ -139,7 +139,7 @@ compiled browse binary. `@huggingface/transformers` v4 requires `onnxruntime-nod
 which fails to `dlopen` from Bun compile's temp extract dir — hence the sidecar
 subprocess. Only `security.ts` (pure-string operations — canary utilities,
 verdict combiner, status) is safe for `server.ts`. See
-`~/.zstack/projects/garrytan-zstack/ceo-plans/2026-04-19-prompt-injection-guard.md`
+`~/.zstack/projects/zeidmahmoud-zstack/ceo-plans/2026-04-19-prompt-injection-guard.md`
 §"Pre-Impl Gate 1 Outcome" for the original architectural decision.
 
 **Thresholds** (in `security.ts`): `BLOCK: 0.85`, `WARN: 0.75`, `LOG_ONLY: 0.40`,

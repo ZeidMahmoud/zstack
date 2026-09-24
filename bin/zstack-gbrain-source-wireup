@@ -322,7 +322,7 @@ do_wireup() {
   # missing/unreadable/other-provider config stays silent (grep -qs), never
   # blocking a working setup.
   if grep -qsi 'zeroentropyai' "$GBRAIN_CONFIG" 2>/dev/null; then
-    warn "gbrain config appears to use the ZeroEntropy embedding recipe. ZeroEntropy sunsets on September 4, 2026 — after that, new pages stop embedding silently. Migration options: https://github.com/ZeidMahmoud/zstack/issues/2365"
+    warn "gbrain config appears to use the ZeroEntropy embedding recipe. ZeroEntropy sunsets on September 4, 2026 — after that, new pages stop embedding silently. Migration options: https://github.com/zeidmahmoud/zstack/issues/2365"
   fi
 
   if [ "${ZSTACK_BRAIN_NO_SYNC:-0}" = "1" ]; then

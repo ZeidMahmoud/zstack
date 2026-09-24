@@ -31,7 +31,7 @@
 # MIGRATION NOTE (2026-08-17): sessions run BEFORE the remote-first fix above,
 # in repos below a stray marker-bearing ancestor, filed their session state
 # (decisions / timeline / ceo-plans / learnings) under the DEGRADED slug —
-# ~/.zstack/projects/<ancestor-basename>/ (e.g. `garrytan`) instead of the
+# ~/.zstack/projects/<ancestor-basename>/ (e.g. `zeidmahmoud`) instead of the
 # canonical ~/.zstack/projects/<owner-repo>/. The slug cache self-heals on the
 # next invocation (see 1b), but already-written store data does NOT move.
 # Whether/how to merge those stores is tracked in TODOS.md — do not add data

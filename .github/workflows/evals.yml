@@ -113,7 +113,7 @@ jobs:
   # Fork PRs never receive repository secrets (ANTHROPIC_API_KEY et al), so
   # every API-calling eval fails at SDK auth before a model runs. Skip
   # deterministically; fork work gets real coverage via a trusted base-repo
-  # branch (see CLAUDE.md's garrytan-agents workflow).
+  # branch (see CLAUDE.md's zeidmahmoud-agents workflow).
   plan-slices:
     runs-on: ubicloud-standard-8
     if: github.actor != 'dependabot[bot]' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)

@@ -5,7 +5,7 @@ Evaluated 2026-09-02. Read-only; see REPORT.md for the maintainer-facing result.
 | Ref | SHA |
 |---|---|
 | time-attack/zstack main (fork tip) | `0aca1f77dec3766c1627e219653ab181d380b542` |
-| ZeidMahmoud/zstack main (upstream HEAD at evaluation) | `0d1bd5616c0ef096bb7ccee336f63c60ee408618` (v1.79.0.0) |
+| zeidmahmoud/zstack main (upstream HEAD at evaluation) | `0d1bd5616c0ef096bb7ccee336f63c60ee408618` (v1.79.0.0) |
 | merge-base | `7c9df1c568a9ea745508f679a329332b2c338063` |
 
 ## Files

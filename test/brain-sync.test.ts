@@ -722,7 +722,7 @@ describe('#2549 queue integrity', () => {
     fs.rmSync(hook);
 
     // A user manually commits in ~/.zstack on top of the stranded bot commit.
-    expect(git(['-c', 'user.name=Garry', '-c', 'user.email=garry@example.com',
+    expect(git(['-c', 'user.name=Zeid', '-c', 'user.email=zeid@example.com',
                 '-c', 'commit.gpgsign=false',
                 'commit', '--allow-empty', '-m', 'manual note']).status).toBe(0);
 

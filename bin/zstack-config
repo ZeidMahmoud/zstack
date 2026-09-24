@@ -39,7 +39,7 @@ _swap_in_render() {
 # Default semantics: DEFAULTS table below is the canonical source. Header text
 # is documentation that must stay in sync with DEFAULTS.
 CONFIG_HEADER='# zstack configuration — edit freely, changes take effect on next skill run.
-# Docs: https://github.com/ZeidMahmoud/zstack
+# Docs: https://github.com/zeidmahmoud/zstack
 #
 # ─── Behavior ────────────────────────────────────────────────────────
 # proactive: true           # Auto-invoke skills when your request matches one.

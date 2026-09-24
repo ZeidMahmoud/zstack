@@ -2,14 +2,14 @@
  * bin/zstack-slug ↔ browse/bin/remote-slug parity.
  *
  * The bug this pins (2026-08-17, observed live in a Conductor worktree of
- * ZeidMahmoud/zstack): a stray marker-bearing ancestor above the repo — an empty
+ * zeidmahmoud/zstack): a stray marker-bearing ancestor above the repo — an empty
  * `~/.git` directory that is not even a valid git repo — captured
  * zstack-slug's "outermost strong marker" walk-up as the project root. That
  * ancestor has no `origin` remote, so the resolver silently degraded to
- * `basename($HOME)` and emitted `SLUG=garrytan`, while remote-slug (which
+ * `basename($HOME)` and emitted `SLUG=zeidmahmoud`, while remote-slug (which
  * asks git for the containing repo's remote) correctly said
- * `garrytan-zstack`. Every store keyed on the slug (decisions, timeline,
- * ceo-plans, learnings) filed into ~/.zstack/projects/garrytan/ — one bucket
+ * `zeidmahmoud-zstack`. Every store keyed on the slug (decisions, timeline,
+ * ceo-plans, learnings) filed into ~/.zstack/projects/zeidmahmoud/ — one bucket
  * shared by every repo under $HOME.
  *
  * The fix makes the canonical remote authoritative: zstack-slug now walks the
@@ -127,8 +127,8 @@ describe('zstack-slug ↔ remote-slug parity', () => {
   });
 
   test('plain clone, https remote WITHOUT .git suffix (live-bug URL shape) — identical slug', () => {
-    const repo = makeRepo(path.join(fixtures, 'proj'), 'https://github.com/ZeidMahmoud/zstack');
-    expectParity(repo, tmpHome, 'garrytan-zstack');
+    const repo = makeRepo(path.join(fixtures, 'proj'), 'https://github.com/zeidmahmoud/zstack');
+    expectParity(repo, tmpHome, 'zeidmahmoud-zstack');
   });
 
   test('plain clone, scp-like ssh remote — identical owner-repo slug', () => {
@@ -137,13 +137,13 @@ describe('zstack-slug ↔ remote-slug parity', () => {
   });
 
   test('git-worktree of a clone (.git FILE, the Conductor shape) — identical slug', () => {
-    const main = makeRepo(path.join(fixtures, 'main-clone'), 'https://github.com/ZeidMahmoud/zstack');
+    const main = makeRepo(path.join(fixtures, 'main-clone'), 'https://github.com/zeidmahmoud/zstack');
     git(['-C', main, '-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-q', '--allow-empty', '-m', 'init']);
     const wt = path.join(fixtures, 'wt');
     git(['-C', main, 'worktree', 'add', '-q', wt, '-b', 'feature-branch']);
     // Sanity: worktree roots carry a .git FILE, not a directory.
     expect(fs.statSync(path.join(wt, '.git')).isFile()).toBe(true);
-    expectParity(wt, tmpHome, 'garrytan-zstack');
+    expectParity(wt, tmpHome, 'zeidmahmoud-zstack');
   });
 
   test('LIVE BUG SHAPE: stray empty .git on an ancestor "home" no longer degrades the slug', () => {
@@ -153,7 +153,7 @@ describe('zstack-slug ↔ remote-slug parity', () => {
     fs.mkdirSync(path.join(strayHome, '.git'), { recursive: true }); // empty — invalid repo
     const main = makeRepo(
       path.join(strayHome, 'conductor', 'workspaces', 'zstack', 'main-clone'),
-      'https://github.com/ZeidMahmoud/zstack',
+      'https://github.com/zeidmahmoud/zstack',
     );
     git(['-C', main, '-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-q', '--allow-empty', '-m', 'init']);
     const wt = path.join(strayHome, 'conductor', 'workspaces', 'zstack', 'beirut-v4');
@@ -161,8 +161,8 @@ describe('zstack-slug ↔ remote-slug parity', () => {
 
     // Both the plain clone and the worktree must resolve to owner-repo — the
     // pre-fix resolver emitted `strayhome` (the marker root's basename) here.
-    expectParity(main, tmpHome, 'garrytan-zstack');
-    expectParity(wt, tmpHome, 'garrytan-zstack');
+    expectParity(main, tmpHome, 'zeidmahmoud-zstack');
+    expectParity(wt, tmpHome, 'zeidmahmoud-zstack');
     expect(slugOf(runSlug(wt, tmpHome))).not.toBe('strayhome');
   });
 
@@ -203,7 +203,7 @@ describe('zstack-slug ↔ remote-slug parity', () => {
   test('cache self-heal: a pre-fix degraded cache entry is rewritten to the canonical slug', () => {
     const strayHome = path.join(fixtures, 'strayhome');
     fs.mkdirSync(path.join(strayHome, '.git'), { recursive: true });
-    const repo = makeRepo(path.join(strayHome, 'git', 'proj'), 'https://github.com/ZeidMahmoud/zstack');
+    const repo = makeRepo(path.join(strayHome, 'git', 'proj'), 'https://github.com/zeidmahmoud/zstack');
 
     // Pre-seed the cache with the pre-fix degraded value: the bogus marker
     // root's basename (what the old resolver computed and cached).
@@ -214,9 +214,9 @@ describe('zstack-slug ↔ remote-slug parity', () => {
 
     const zstack = runSlug(repo, tmpHome);
     expect(zstack.status).toBe(0);
-    expect(slugOf(zstack)).toBe('garrytan-zstack');
+    expect(slugOf(zstack)).toBe('zeidmahmoud-zstack');
     // The cache file itself must have been overwritten (self-healing).
-    expect(fs.readFileSync(cacheFile, 'utf8').trim()).toBe('garrytan-zstack');
+    expect(fs.readFileSync(cacheFile, 'utf8').trim()).toBe('zeidmahmoud-zstack');
   });
 
   test('hostile origin `url = ..` cannot become a ".." slug — basename fallback holds', () => {

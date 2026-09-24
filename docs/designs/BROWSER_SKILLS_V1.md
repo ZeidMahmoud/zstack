@@ -2,7 +2,7 @@
 
 **Status:** Phase 1 shipped on `garrytan/browserharness`. Phases 2-4 enumerated below.
 **Last updated:** 2026-04-26
-**Authors:** garrytan (with /plan-eng-review and /codex outside-voice review)
+**Authors:** zeidmahmoud (with /plan-eng-review and /codex outside-voice review)
 
 ## What this is
 

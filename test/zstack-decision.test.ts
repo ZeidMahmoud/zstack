@@ -111,10 +111,10 @@ describe("filterByScope", () => {
 
 describe("decisionPaths", () => {
   it("derives log/snapshot/archive under the project slug", () => {
-    const p = decisionPaths("garrytan-zstack", "/tmp/gs");
-    expect(p.log).toBe("/tmp/gs/projects/garrytan-zstack/decisions.jsonl");
-    expect(p.snapshot).toBe("/tmp/gs/projects/garrytan-zstack/decisions.active.json");
-    expect(p.archive).toBe("/tmp/gs/projects/garrytan-zstack/decisions.archive.jsonl");
+    const p = decisionPaths("zeidmahmoud-zstack", "/tmp/gs");
+    expect(p.log).toBe("/tmp/gs/projects/zeidmahmoud-zstack/decisions.jsonl");
+    expect(p.snapshot).toBe("/tmp/gs/projects/zeidmahmoud-zstack/decisions.active.json");
+    expect(p.archive).toBe("/tmp/gs/projects/zeidmahmoud-zstack/decisions.archive.jsonl");
   });
 });
 

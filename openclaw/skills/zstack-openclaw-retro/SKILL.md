@@ -89,7 +89,7 @@ Then show a **per-author leaderboard** immediately below:
 
 ```
 Contributor         Commits   +/-          Top area
-You (garry)              32   +2400/-300   browse/
+You (zeid)              32   +2400/-300   browse/
 alice                    12   +800/-150    app/services/
 bob                       3   +120/-40     tests/
 ```
